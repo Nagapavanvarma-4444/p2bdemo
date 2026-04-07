@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel | PLAN 2 BUILD</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+
+<body>
+    <div id="navbar-placeholder"></div>
+
+    <div class="dashboard-page admin-page">
+        <div class="dashboard-container">
+            <aside class="dashboard-sidebar">
+                <div class="sidebar-user">
+                    <div class="avatar"
+                        style="background:linear-gradient(135deg,var(--gold),var(--gold-dark));color:var(--navy)">A
+                    </div>
+                    <div class="sidebar-user-info">
+                        <h4>Admin</h4>
+                        <p>Administrator</p>
+                    </div>
+                </div>
+                <nav class="sidebar-nav">
+                    <button class="sidebar-link active" onclick="showTab('dashboard', this)"><span
+                            class="icon">📊</span> Dashboard</button>
+                    <button class="sidebar-link" onclick="showTab('users', this)"><span class="icon">👥</span>
+                        Users</button>
+                    <button class="sidebar-link" onclick="showTab('approvals', this)"><span class="icon">✅</span>
+                        Approvals</button>
+                    <button class="sidebar-link" onclick="showTab('projects', this)"><span class="icon">📋</span>
+                        Projects</button>
+                </nav>
+            </aside>
+            <main class="dashboard-main" id="main-content">
+                <div class="spinner" style="margin:var(--space-4xl) auto"></div>
+            </main>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!Auth.isLoggedIn() || !Auth.isAdmin()) {
+                showToast('Admin access required', 'warning');
+                setTimeout(() => window.location.href = '/login.html', 1000);
+                return;
+            }
+            showTab('dashboard');
+        });
+
+        function showTab(tab, el) {
+            document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+            if (el) el.classList.add('active');
+            else document.querySelector(`.sidebar-link[onclick*="${tab}"]`)?.classList.add('active');
+            const main = document.getElementById('main-content');
+            main.innerHTML = '<div class="spinner" style="margin:var(--space-4xl) auto"></div>';
+            switch (tab) {
+                case 'dashboard': loadAdminDashboard(); break;
+                case 'users': loadUsers(); break;
+                case 'approvals': loadApprovals(); break;
+                case 'projects': loadAllProjects(); break;
+            }
+        }
+
+        async function loadAdminDashboard() {
+            const main = document.getElementById('main-content');
+            try {
+                const data = await apiCall('/admin/dashboard');
+                const stats = data.stats || {};
+                main.innerHTML = `
+                    <div class="dashboard-header"><div><h1>Admin Dashboard</h1><p class="subtitle">Overview of the platform</p></div></div>
+                    <div class="admin-stats-grid">
+                        <div class="admin-stat-card"><div class="value">${stats.total_users || 0}</div><div class="label">Total Users</div></div>
+                        <div class="admin-stat-card"><div class="value">${stats.total_engineers || 0}</div><div class="label">Engineers</div></div>
+                        <div class="admin-stat-card"><div class="value">${stats.total_customers || 0}</div><div class="label">Customers</div></div>
+                        <div class="admin-stat-card"><div class="value">${stats.total_projects || 0}</div><div class="label">Projects</div></div>
+                        <div class="admin-stat-card"><div class="value">${stats.pending_approvals || 0}</div><div class="label">Pending Approvals</div></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-xl)">
+                        <div class="dashboard-card">
+                            <div class="card-header"><h3>Platform Revenue</h3></div>
+                            <div class="card-body">
+                                <div class="chart-placeholder">📊 Revenue analytics will appear here when subscriptions are active</div>
+                            </div>
+                        </div>
+                        <div class="dashboard-card">
+                            <div class="card-header"><h3>Recent Activity</h3></div>
+                            <div class="card-body">
+                                <div style="padding:var(--space-lg);text-align:center;color:var(--text-muted)">
+                                    <p>Recent registrations and activities</p>
+                                    <p style="font-size:0.85rem">Active monitoring available</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                main.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${err.message}</p></div>`;
+            }
+        }
+
+        async function loadUsers() {
+            const main = document.getElementById('main-content');
+            try {
+                const data = await apiCall('/admin/users?limit=50');
+                const users = data.users || [];
+                main.innerHTML = `
+                    <div class="dashboard-header"><div><h1>User Management</h1><p class="subtitle">${users.length} users</p></div></div>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+                            <tbody>${users.map(u => `
+                                <tr>
+                                    <td><div style="display:flex;align-items:center;gap:var(--space-sm)"><div class="avatar avatar-sm">${u.name.charAt(0)}</div>${u.name}</div></td>
+                                    <td>${u.email}</td>
+                                    <td><span class="badge ${u.role === 'admin' ? 'badge-gold' : u.role === 'engineer' ? 'badge-blue' : 'badge-gray'}">${u.role}</span></td>
+                                    <td><span class="badge ${u.is_active !== false ? 'badge-green' : 'badge-red'}">${u.is_active !== false ? 'Active' : 'Inactive'}</span></td>
+                                    <td>${formatDate(u.created_at)}</td>
+                                    <td>
+                                        ${u.role === 'engineer' ? `<button class="btn btn-sm btn-outline" onclick="toggleFeatured('${u._id}')">⭐</button>` : ''}
+                                    </td>
+                                </tr>
+                            `).join('')}</tbody>
+                        </table>
+                    </div>
+                `;
+            } catch (err) {
+                main.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${err.message}</p></div>`;
+            }
+        }
+
+        async function loadApprovals() {
+            const main = document.getElementById('main-content');
+            try {
+                const data = await apiCall('/admin/pending-engineers');
+                const pending = data.engineers || [];
+                main.innerHTML = `
+                    <div class="dashboard-header"><div><h1>Engineer Approvals</h1><p class="subtitle">${pending.length} pending</p></div></div>
+                    ${pending.length === 0 ? '<div class="empty-state" style="padding:var(--space-4xl)"><div class="icon">✅</div><h3>All caught up!</h3><p>No pending approvals</p></div>' : pending.map(eng => `
+                        <div class="approval-card">
+                            <div class="avatar">${eng.name.charAt(0)}</div>
+                            <div class="approval-info">
+                                <h4>${eng.name}</h4>
+                                <p>${eng.category || 'Engineer'} • ${eng.location || 'India'} • Joined ${formatDate(eng.created_at)}</p>
+                            </div>
+                            <div class="approval-actions">
+                                <button class="btn btn-success btn-sm" onclick="approveEngineer('${eng._id}')">Approve</button>
+                                <button class="btn btn-danger btn-sm" onclick="rejectEngineer('${eng._id}')">Reject</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                `;
+            } catch (err) {
+                main.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${err.message}</p></div>`;
+            }
+        }
+
+        async function approveEngineer(id) {
+            try {
+                await apiCall(`/admin/engineers/${id}/approve`, { method: 'PUT' });
+                showToast('Engineer approved!', 'success');
+                loadApprovals();
+            } catch (err) { showToast(err.message, 'error'); }
+        }
+
+        async function rejectEngineer(id) {
+            if (!confirm('Are you sure you want to reject this engineer?')) return;
+            try {
+                await apiCall(`/admin/engineers/${id}/reject`, { method: 'PUT' });
+                showToast('Engineer rejected', 'info');
+                loadApprovals();
+            } catch (err) { showToast(err.message, 'error'); }
+        }
+
+        async function toggleFeatured(id) {
+            try {
+                await apiCall(`/admin/engineers/${id}/featured`, { method: 'PUT' });
+                showToast('Featured status updated', 'success');
+                loadUsers();
+            } catch (err) { showToast(err.message, 'error'); }
+        }
+
+        async function loadAllProjects() {
+            const main = document.getElementById('main-content');
+            try {
+                const data = await apiCall('/projects?limit=50');
+                const projects = data.projects || [];
+                main.innerHTML = `
+                    <div class="dashboard-header"><div><h1>All Projects</h1><p class="subtitle">${projects.length} projects</p></div></div>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr><th>Title</th><th>Customer</th><th>Category</th><th>Location</th><th>Status</th><th>Created</th></tr></thead>
+                            <tbody>${projects.map(p => `
+                                <tr>
+                                    <td><strong>${p.title}</strong></td>
+                                    <td>${p.customer_name || '—'}</td>
+                                    <td>${p.category}</td>
+                                    <td>${p.location}</td>
+                                    <td><span class="badge ${p.status === 'open' ? 'badge-green' : p.status === 'in_progress' ? 'badge-blue' : 'badge-gray'}">${p.status}</span></td>
+                                    <td>${formatDate(p.created_at)}</td>
+                                </tr>
+                            `).join('')}</tbody>
+                        </table>
+                    </div>
+                `;
+            } catch (err) {
+                main.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${err.message}</p></div>`;
+            }
+        }
+    </script>
+</body>
+
+</html>

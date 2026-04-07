@@ -1,0 +1,468 @@
+/* ============================================
+   PLAN 2 BUILD — Engineer Listing & Profile Styles
+   ============================================ */
+
+.engineers-page {
+    padding-top: calc(var(--nav-height) + 20px);
+    min-height: 100vh;
+}
+
+/* --- Filter/Search Bar --- */
+.search-bar {
+    display: flex;
+    gap: var(--space-md);
+    margin-bottom: var(--space-2xl);
+    flex-wrap: wrap;
+}
+
+.search-input-wrapper {
+    flex: 1;
+    min-width: 280px;
+    position: relative;
+}
+
+.search-input-wrapper .form-input {
+    padding-left: 44px;
+}
+
+.search-input-wrapper .search-icon {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+}
+
+/* --- Layout: Sidebar + Grid --- */
+.engineers-layout {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: var(--space-2xl);
+}
+
+/* --- Filter Sidebar --- */
+.filter-sidebar {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-xl);
+    height: fit-content;
+    position: sticky;
+    top: calc(var(--nav-height) + 20px);
+}
+
+.filter-sidebar h3 {
+    font-size: 1.1rem;
+    margin-bottom: var(--space-lg);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.filter-group {
+    margin-bottom: var(--space-xl);
+}
+
+.filter-group label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filter-group .form-select {
+    font-size: 0.9rem;
+}
+
+.filter-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.filter-chip {
+    padding: 6px 14px;
+    border-radius: var(--radius-full);
+    border: 1px solid var(--border-color);
+    background: none;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.filter-chip:hover,
+.filter-chip.active {
+    background: rgba(212, 168, 67, 0.1);
+    border-color: var(--gold);
+    color: var(--gold);
+}
+
+/* --- Engineer Cards Grid --- */
+.engineers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--space-xl);
+}
+
+.engineer-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    transition: all var(--transition-base);
+    position: relative;
+}
+
+.engineer-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.engineer-card-header {
+    position: relative;
+    padding: var(--space-xl) var(--space-xl) var(--space-sm);
+    display: flex;
+    gap: var(--space-lg);
+}
+
+.engineer-card-header .avatar-lg {
+    width: 72px;
+    height: 72px;
+    border-radius: var(--radius-lg);
+    font-size: 1.8rem;
+}
+
+.engineer-card-main {
+    flex: 1;
+}
+
+.engineer-card-main h3 {
+    font-size: 1.1rem;
+    margin-bottom: 2px;
+}
+
+.engineer-card-main .category {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+}
+
+.engineer-card-main .location {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.engineer-badges {
+    display: flex;
+    gap: 4px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.engineer-card-body {
+    padding: var(--space-sm) var(--space-xl);
+}
+
+.engineer-card-body .bio {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.engineer-card-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-sm);
+    padding: var(--space-md) var(--space-xl);
+    border-top: 1px solid var(--border-color);
+    margin-top: var(--space-md);
+}
+
+.engineer-card-stats .stat {
+    text-align: center;
+}
+
+.engineer-card-stats .stat-value {
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--gold);
+}
+
+.engineer-card-stats .stat-label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.engineer-card-footer {
+    padding: var(--space-md) var(--space-xl) var(--space-xl);
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.engineer-card-footer .btn {
+    flex: 1;
+    font-size: 0.85rem;
+    padding: 10px;
+}
+
+/* Bookmark button */
+.bookmark-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: var(--radius-md);
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.bookmark-btn:hover,
+.bookmark-btn.active {
+    background: rgba(212, 168, 67, 0.15);
+    color: var(--gold);
+    border-color: var(--gold);
+}
+
+/* Featured badge */
+.featured-ribbon {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: linear-gradient(135deg, var(--gold), var(--gold-dark));
+    color: var(--navy);
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ---------- Engineer Profile Page ---------- */
+.profile-page {
+    padding-top: var(--nav-height);
+}
+
+.profile-hero {
+    background: linear-gradient(135deg, var(--navy), var(--navy-light));
+    padding: var(--space-3xl) 0 var(--space-4xl);
+    position: relative;
+    overflow: hidden;
+}
+
+.profile-hero::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, rgba(212, 168, 67, 0.08) 0%, transparent 70%);
+    border-radius: 50%;
+}
+
+.profile-hero-content {
+    display: flex;
+    gap: var(--space-2xl);
+    align-items: center;
+    position: relative;
+}
+
+.profile-avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    border: 3px solid var(--gold);
+    background: var(--navy-mid);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    color: var(--gold);
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.profile-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-info h1 {
+    font-size: 2rem;
+    color: var(--white);
+    margin-bottom: 4px;
+}
+
+.profile-info .category-label {
+    color: var(--gold);
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: var(--space-md);
+}
+
+.profile-info .location-label {
+    color: var(--gray-300);
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.profile-stats-row {
+    display: flex;
+    gap: var(--space-2xl);
+    margin-top: var(--space-lg);
+}
+
+.profile-stat {
+    text-align: center;
+}
+
+.profile-stat .value {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--gold);
+}
+
+.profile-stat .label {
+    font-size: 0.8rem;
+    color: var(--gray-400);
+}
+
+.profile-body {
+    padding: var(--space-2xl) 0;
+}
+
+.profile-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: var(--space-2xl);
+}
+
+.profile-section {
+    margin-bottom: var(--space-2xl);
+}
+
+.profile-section h3 {
+    font-size: 1.2rem;
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-sm);
+    border-bottom: 2px solid var(--gold);
+    display: inline-block;
+}
+
+.skills-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.skill-tag {
+    padding: 6px 14px;
+    background: rgba(212, 168, 67, 0.1);
+    border: 1px solid rgba(212, 168, 67, 0.2);
+    border-radius: var(--radius-full);
+    font-size: 0.85rem;
+    color: var(--gold);
+    font-weight: 500;
+}
+
+/* Portfolio Gallery */
+.portfolio-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--space-md);
+}
+
+.portfolio-item {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    aspect-ratio: 4/3;
+    cursor: pointer;
+    position: relative;
+}
+
+.portfolio-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform var(--transition-base);
+}
+
+.portfolio-item:hover img {
+    transform: scale(1.05);
+}
+
+.portfolio-item .overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+    opacity: 0;
+    transition: opacity var(--transition-base);
+    display: flex;
+    align-items: flex-end;
+    padding: var(--space-md);
+}
+
+.portfolio-item:hover .overlay {
+    opacity: 1;
+}
+
+.portfolio-item .overlay p {
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .engineers-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .filter-sidebar {
+        position: static;
+    }
+
+    .profile-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .profile-hero-content {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .profile-stats-row {
+        justify-content: center;
+    }
+
+    .profile-info .location-label {
+        justify-content: center;
+    }
+}

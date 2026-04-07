@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard | PLAN 2 BUILD</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+
+<body>
+    <div id="navbar-placeholder"></div>
+
+    <div class="dashboard-page">
+        <div class="dashboard-container">
+            <aside class="dashboard-sidebar" id="sidebar">
+                <div class="sidebar-user" id="sidebar-user"></div>
+                <nav class="sidebar-nav">
+                    <button class="sidebar-link active" onclick="showTab('overview', this)"><span class="icon">📊</span>
+                        Overview</button>
+                    <button class="sidebar-link" onclick="showTab('projects', this)"><span class="icon">📋</span> My
+                        Projects</button>
+                    <button class="sidebar-link" onclick="showTab('proposals', this)"><span class="icon">📨</span>
+                        Proposals</button>
+                    <button class="sidebar-link" onclick="showTab('bookmarks', this)"><span class="icon">🔖</span>
+                        Bookmarks</button>
+                    <button class="sidebar-link" onclick="showTab('notifications', this)"><span class="icon">🔔</span>
+                        Notifications</button>
+                    <a href="/messages.html" class="sidebar-link"><span class="icon">💬</span> Messages</a>
+                    <a href="/post-project.html" class="sidebar-link"><span class="icon">➕</span> Post Project</a>
+                </nav>
+            </aside>
+            <main class="dashboard-main" id="main-content">
+                <div class="spinner" style="margin:var(--space-4xl) auto"></div>
+            </main>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        let currentTab = 'overview';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
+            const user = Auth.getUser();
+            document.getElementById('sidebar-user').innerHTML = `
+                <div class="avatar">${user.avatar ? `<img src="${user.avatar}">` : user.name.charAt(0)}</div>
+                <div class="sidebar-user-info"><h4>${user.name}</h4><p>Customer</p></div>
+            `;
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('tab')) currentTab = params.get('tab');
+            showTab(currentTab);
+        });
+
+        function showTab(tab, el) {
+            currentTab = tab;
+            document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+            if (el) el.classList.add('active');
+            else document.querySelector(`.sidebar-link[onclick*="${tab}"]`)?.classList.add('active');
+
+            const main = document.getElementById('main-content');
+            main.innerHTML = '<div class="spinner" style="margin:var(--space-4xl) auto"></div>';
+
+            switch (tab) {
+                case 'overview': loadOverview(); break;
+                case 'projects': loadProjects(); break;
+                case 'proposals': loadProposals(); break;
+                case 'bookmarks': loadBookmarks(); break;
+                case 'notifications': loadNotifications(); break;
+            }
+        }
+
+        async function loadOverview() {
+            const main = document.getElementById('main-content');
+            try {
+                const [projects, notifs] = await Promise.all([
+                    apiCall('/projects/my-projects').catch(() => ({ projects: [] })),
+                    apiCall('/notifications?limit=5').catch(() => ({ notifications: [] }))
+                ]);
+                const projList = projects.projects || [];
+                const notifList = notifs.notifications || [];
+                const activeCount = projList.filter(p => p.status === 'open' || p.status === 'in_progress').length;
+                const completedCount = projList.filter(p => p.status === 'completed').length;
+
+                main.innerHTML = `
+                    <div class="dashboard-header">
+                        <div><h1>Welcome back!</h1><p class="subtitle">Here's what's happening with your projects</p></div>
+                        <a href="/post-project.html" class="btn btn-primary">➕ Post New Project</a>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card"><div class="stat-header"><div class="stat-icon gold">📋</div></div><div class="stat-value">${projList.length}</div><div class="stat-label">Total Projects</div></div>
+                        <div class="stat-card"><div class="stat-header"><div class="stat-icon green">🟢</div></div><div class="stat-value">${activeCount}</div><div class="stat-label">Active Projects</div></div>
+                        <div class="stat-card"><div class="stat-header"><div class="stat-icon blue">✅</div></div><div class="stat-value">${completedCount}</div><div class="stat-label">Completed</div></div>
+                        <div class="stat-card"><div class="stat-header"><div class="stat-icon red">🔔</div></div><div class="stat-value">${notifList.filter(n => !n.is_read).length}</div><div class="stat-label">Unread Notifications</div></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-xl)">
+                        <div class="dashboard-card">
+                            <div class="card-header"><h3>Recent Projects</h3><a href="#" onclick="showTab('projects')" style="font-size:0.85rem">View all →</a></div>
+                            <div class="card-body">${projList.length === 0 ? '<div class="empty-state"><p>No projects yet. <a href="/post-project.html">Post one now!</a></p></div>' : projList.slice(0, 4).map(p => `
+                                <div class="project-item">
+                                    <div class="project-info">
+                                        <h4>${p.title}</h4>
+                                        <div class="project-meta"><span>📍 ${p.location}</span><span>${timeAgo(p.created_at)}</span></div>
+                                    </div>
+                                    <span class="badge ${p.status === 'open' ? 'badge-green' : p.status === 'in_progress' ? 'badge-blue' : 'badge-gray'}">${p.status}</span>
+                                </div>
+                            `).join('')}</div>
+                        </div>
+                        <div class="dashboard-card">
+                            <div class="card-header"><h3>Notifications</h3><a href="#" onclick="showTab('notifications')" style="font-size:0.85rem">View all →</a></div>
+                            <div class="card-body">${notifList.length === 0 ? '<div class="empty-state"><p>No notifications</p></div>' : notifList.slice(0, 5).map(n => `
+                                <div class="project-item" style="opacity:${n.is_read ? '0.6' : '1'}">
+                                    <div class="project-info">
+                                        <h4 style="font-size:0.9rem">${n.title}</h4>
+                                        <p style="font-size:0.8rem;color:var(--text-muted)">${n.message}</p>
+                                    </div>
+                                    <span style="font-size:0.75rem;color:var(--text-muted)">${timeAgo(n.created_at)}</span>
+                                </div>
+                            `).join('')}</div>
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                main.innerHTML = `<div class="empty-state"><h3>Error loading dashboard</h3><p>${err.message}</p></div>`;
+            }
+        }
+
+        async function loadProjects() {
+            const main = document.getElementById('main-content');
+            try {
+                const data = await apiCall('/projects/my-projects');
+                const projects = data.projects || [];
+                main.innerHTML = `
+                    <div class="dashboard-header">
+                        <div><h1>My Projects</h1><p class="subtitle">${projects.length} projects</p></div>
+                        <a href="/post-project.html" class="btn btn-primary">➕ New Project</a>
+                    </div>
+                    <div class="dashboard-card">
+                        <div class="card-body">${projects.length === 0 ? '<div class="empty-state"><div class="icon">📋</div><h3>No projects yet</h3><p>Post your first project to get started!</p><a href="/post-project.html" class="btn btn-primary mt-3">Post Project</a></div>' : projects.map(p => `
+                            <div class="project-item">
+                                <div class="project-info">
+                                    <h4>${p.title}</h4>
+                                    <div class="project-meta">
+                                        <span>📍 ${p.location}</span>
+                                        <span>🏷️ ${p.category}</span>
+                                        <span>💰 ${p.budget?.min ? formatCurrency(p.budget.min) + ' - ' + formatCurrency(p.budget.max) : 'Flexible'}</span>
+                                        <span>${timeAgo(p.created_at)}</span>
+                                    </div>
+                                </div>
+                                <span class="badge ${p.status === 'open' ? 'badge-green' : p.status === 'in_progress' ? 'badge-blue' : p.status === 'completed' ? 'badge-gray' : 'badge-red'}">${p.status}</span>
+                            </div>
+                        `).join('')}</div>
+                    </div>
+                `;
+            } catch (err) {
+                main.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${err.message}</p></div>`;
+            }
+        }
+
+        async function loadProposals() {
+            const main = document.getElementById('main-content');
+            try {
+                const projData = await apiCall('/projects/my-projects');
+                const projects = projData.projects || [];
+                let allProposals = [];
+                for (const p of projects.slice(0, 10)) {
+                    try {
+                        const propData = await apiCall(`/proposals/project/${p._id}`);
+                        (propData.proposals || []).forEach(prop => { prop._project_title = p.title; });
+                        allProposals = allProposals.concat(propData.proposals || []);
+                    } catch (e) { }
+                }
+
+                main.innerHTML = `
+                    <div class="dashboard-header"><div><h1>Proposals</h1><p class="subtitle">${allProposals.length} total proposals received</p></div></div>
+                    <div class="dashboard-card">
+                        <div class="card-body">${allProposals.length === 0 ? '<div class="empty-state"><div class="icon">📨</div><h3>No proposals yet</h3><p>Proposals will appear here once engineers respond to your projects</p></div>' : allProposals.map(prop => `
+                            <div class="proposal-item">
+                                <div class="avatar">${(prop.engineer_name || 'E').charAt(0)}</div>
+                                <div class="proposal-content">
+                                    <h4>${prop.engineer_name || 'Engineer'} → ${prop._project_title}</h4>
+                                    <p>${prop.cover_letter ? prop.cover_letter.substring(0, 120) + '...' : ''}</p>
+                                    <div class="project-meta">
+                                        <span>💰 ${formatCurrency(prop.price || 0)}</span>
+                                        <span>⏰ ${prop.timeline || 'Flexible'}</span>
+                                        <span>${timeAgo(prop.created_at)}</span>
+                                    </div>
+                                </div>
+                                <div class="proposal-actions">
+                                    ${prop.status === 'pending' ? `
+                                        <button class="btn btn-success btn-sm" onclick="handleProposal('${prop._id}', 'accepted')">Accept</button>
+                                        <button class="btn btn-danger btn-sm" onclick="handleProposal('${prop._id}', 'rejected')">Reject</button>
+                                    ` : `<span class="badge ${prop.status === 'accepted' ? 'badge-green' : 'badge-red'}">${prop.status}</span>`}
+                                </div>
+                            </div>
+                        `).join('')}</div>
+                    </div>
+                `;
+            } catch (err) {
+                main.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${err.message}</p></div>`;
+            }
+        }
+
+        async function handleProposal(proposalId, status) {
+            try {
+                await apiCall(`/proposals/${proposalId}/status`, { method: 'PUT', body: { status } });
+                showToast(`Proposal ${status}!`, 'success');
+                loadProposals();
+            } catch (err) { showToast(err.message, 'error'); }
+        }
+
+        async function loadBookmarks() {
+            const main = document.getElementById('main-content');
+            try {
+                const data = await apiCall('/bookmarks');
+                const bookmarks = data.bookmarks || [];
+                main.innerHTML = `
+                    <div class="dashboard-header"><div><h1>Bookmarked Engineers</h1><p class="subtitle">${bookmarks.length} saved</p></div></div>
+                    <div class="dashboard-card"><div class="card-body">${bookmarks.length === 0 ? '<div class="empty-state"><div class="icon">🔖</div><h3>No bookmarks yet</h3><p>Save your favorite engineers for quick access</p><a href="/engineers.html" class="btn btn-primary mt-3">Browse Engineers</a></div>' : bookmarks.map(b => `
+                        <div class="project-item">
+                            <div class="avatar">${(b.engineer_name || 'E').charAt(0)}</div>
+                            <div class="project-info">
+                                <h4>${b.engineer_name || 'Engineer'}</h4>
+                                <div class="project-meta"><span>${b.category || ''}</span><span>📍 ${b.location || ''}</span></div>
+                            </div>
+                            <a href="/engineer-profile.html?id=${b.engineer_id}" class="btn btn-primary btn-sm">View</a>
+                        </div>
+                    `).join('')}</div></div>
+                `;
+            } catch (err) {
+                main.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${err.message}</p></div>`;
+            }
+        }
+
+        async function loadNotifications() {
+            const main = document.getElementById('main-content');
+            try {
+                const data = await apiCall('/notifications');
+                const notifs = data.notifications || [];
+                main.innerHTML = `
+                    <div class="dashboard-header">
+                        <div><h1>Notifications</h1><p class="subtitle">${notifs.length} notifications</p></div>
+                        <button class="btn btn-outline btn-sm" onclick="markAllRead()">Mark all read</button>
+                    </div>
+                    <div class="dashboard-card"><div class="card-body">${notifs.length === 0 ? '<div class="empty-state"><div class="icon">🔔</div><h3>No notifications</h3></div>' : notifs.map(n => `
+                        <div class="project-item" style="opacity:${n.is_read ? '0.6' : '1'}">
+                            <div style="font-size:1.5rem">${n.type === 'proposal' ? '📨' : n.type === 'message' ? '💬' : n.type === 'review' ? '⭐' : '🔔'}</div>
+                            <div class="project-info">
+                                <h4 style="font-size:0.95rem">${n.title}</h4>
+                                <p style="font-size:0.85rem;color:var(--text-muted)">${n.message}</p>
+                            </div>
+                            <span style="font-size:0.75rem;color:var(--text-muted);flex-shrink:0">${timeAgo(n.created_at)}</span>
+                        </div>
+                    `).join('')}</div></div>
+                `;
+            } catch (err) {
+                main.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${err.message}</p></div>`;
+            }
+        }
+
+        async function markAllRead() {
+            try {
+                await apiCall('/notifications/mark-all-read', { method: 'PUT' });
+                showToast('All notifications marked as read', 'success');
+                loadNotifications();
+            } catch (err) { showToast(err.message, 'error'); }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Find Engineers | PLAN 2 BUILD</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/engineers.css">
+</head>
+
+<body>
+    <div id="navbar-placeholder"></div>
+
+    <div class="engineers-page">
+        <div class="container">
+            <div class="section-heading" style="text-align:left;margin-bottom:var(--space-xl)">
+                <h2 style="font-size:2rem">Find Engineers & Professionals</h2>
+                <p style="margin:0">Browse verified professionals across all construction disciplines</p>
+            </div>
+
+            <div class="search-bar">
+                <div class="search-input-wrapper">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" class="form-input" id="search-input"
+                        placeholder="Search by name, specialty, or location...">
+                </div>
+                <select class="form-select" id="sort-select" style="max-width:200px">
+                    <option value="">Sort By</option>
+                    <option value="rating">Highest Rating</option>
+                    <option value="experience">Most Experience</option>
+                    <option value="projects">Most Projects</option>
+                </select>
+            </div>
+
+            <div class="engineers-layout">
+                <div class="filter-sidebar">
+                    <h3>Filters <button class="btn btn-sm btn-outline" onclick="clearFilters()">Clear</button></h3>
+                    <div class="filter-group">
+                        <label>Category</label>
+                        <select class="form-select" id="filter-category">
+                            <option value="">All Categories</option>
+                            <option value="Civil Engineer">Civil Engineer</option>
+                            <option value="Electrical Engineer">Electrical Engineer</option>
+                            <option value="Architect">Architect</option>
+                            <option value="Interior Designer">Interior Designer</option>
+                            <option value="Exterior Designer">Exterior Designer</option>
+                            <option value="Contractor">Contractor</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Location</label>
+                        <input type="text" class="form-input" id="filter-location" placeholder="e.g., Mumbai">
+                    </div>
+                    <div class="filter-group">
+                        <label>Min Rating</label>
+                        <div class="filter-chips">
+                            <button class="filter-chip" onclick="setRatingFilter(0, this)">All</button>
+                            <button class="filter-chip" onclick="setRatingFilter(3, this)">3+</button>
+                            <button class="filter-chip" onclick="setRatingFilter(4, this)">4+</button>
+                            <button class="filter-chip" onclick="setRatingFilter(4.5, this)">4.5+</button>
+                        </div>
+                    </div>
+                    <div class="filter-group">
+                        <label>Verification</label>
+                        <div class="filter-chips">
+                            <button class="filter-chip" onclick="setVerifiedFilter(false, this)">All</button>
+                            <button class="filter-chip" onclick="setVerifiedFilter(true, this)">Verified Only</button>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-block mt-3" onclick="loadEngineers()">Apply Filters</button>
+                </div>
+
+                <div>
+                    <div id="engineers-count"
+                        style="margin-bottom:var(--space-lg);color:var(--text-muted);font-size:0.9rem"></div>
+                    <div class="engineers-grid" id="engineers-grid">
+                        <div class="empty-state" style="grid-column:1/-1">
+                            <div class="spinner" style="margin:0 auto var(--space-lg)"></div>
+                            <p>Loading engineers...</p>
+                        </div>
+                    </div>
+                    <div class="pagination" id="pagination"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="footer-placeholder"></div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        let currentPage = 1;
+        let minRating = 0;
+        let verifiedOnly = false;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const cat = params.get('category');
+            if (cat) document.getElementById('filter-category').value = cat;
+            loadEngineers();
+        });
+
+        document.getElementById('search-input').addEventListener('input', debounce(loadEngineers, 500));
+        document.getElementById('sort-select').addEventListener('change', loadEngineers);
+
+        function debounce(fn, delay) {
+            let t; return function (...args) { clearTimeout(t); t = setTimeout(() => fn.apply(this, args), delay); };
+        }
+
+        function setRatingFilter(val, el) {
+            minRating = val;
+            document.querySelectorAll('.filter-group:nth-child(3) .filter-chip').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        function setVerifiedFilter(val, el) {
+            verifiedOnly = val;
+            document.querySelectorAll('.filter-group:nth-child(4) .filter-chip').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        function clearFilters() {
+            document.getElementById('filter-category').value = '';
+            document.getElementById('filter-location').value = '';
+            document.getElementById('search-input').value = '';
+            minRating = 0;
+            verifiedOnly = false;
+            document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+            loadEngineers();
+        }
+
+        async function loadEngineers(page = 1) {
+            currentPage = page;
+            const params = new URLSearchParams();
+            params.set('page', page);
+            params.set('limit', 12);
+
+            const search = document.getElementById('search-input').value;
+            const category = document.getElementById('filter-category').value;
+            const location = document.getElementById('filter-location').value;
+            const sort = document.getElementById('sort-select').value;
+
+            if (search) params.set('search', search);
+            if (category) params.set('category', category);
+            if (location) params.set('location', location);
+            if (sort) params.set('sort', sort);
+            if (minRating) params.set('min_rating', minRating);
+            if (verifiedOnly) params.set('verified', 'true');
+
+            const grid = document.getElementById('engineers-grid');
+            grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="spinner" style="margin:0 auto var(--space-lg)"></div><p>Loading...</p></div>';
+
+            try {
+                const data = await apiCall(`/engineers?${params.toString()}`);
+                const engineers = data.engineers || [];
+                document.getElementById('engineers-count').textContent = `${data.total || engineers.length} professionals found`;
+
+                if (engineers.length === 0) {
+                    grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="icon">🔍</div><h3>No engineers found</h3><p>Try adjusting your filters</p></div>';
+                    return;
+                }
+
+                grid.innerHTML = engineers.map(eng => `
+                    <div class="engineer-card">
+                        ${eng.is_featured ? '<div class="featured-ribbon">⭐ Featured</div>' : ''}
+                        <div class="engineer-card-header">
+                            <div class="avatar avatar-lg" style="border-radius:var(--radius-lg)">
+                                ${eng.avatar ? `<img src="${eng.avatar}" alt="${eng.name}">` : eng.name.charAt(0)}
+                            </div>
+                            <div class="engineer-card-main">
+                                <h3>${eng.name}</h3>
+                                <div class="category">${eng.category || 'Professional'}</div>
+                                <div class="location">📍 ${eng.location || 'India'}</div>
+                                <div class="engineer-badges">
+                                    ${eng.is_verified ? '<span class="badge badge-green">✓ Verified</span>' : ''}
+                                    ${eng.badge ? `<span class="badge badge-gold">${eng.badge}</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="engineer-card-body">
+                            <p class="bio">${eng.bio || 'Experienced construction professional ready to help with your project.'}</p>
+                        </div>
+                        <div class="engineer-card-stats">
+                            <div class="stat">
+                                <div class="stat-value">${eng.average_rating?.toFixed(1) || '—'}</div>
+                                <div class="stat-label">Rating</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value">${eng.experience_years || 0}</div>
+                                <div class="stat-label">Years</div>
+                            </div>
+                            <div class="stat">
+                                <div class="stat-value">${eng.completed_projects || 0}</div>
+                                <div class="stat-label">Projects</div>
+                            </div>
+                        </div>
+                        <div class="engineer-card-footer">
+                            <a href="/engineer-profile.html?id=${eng.id}" class="btn btn-primary btn-sm">View Profile</a>
+                            <a href="/messages.html?to=${eng.id}" class="btn btn-outline btn-sm">Message</a>
+                            <button class="bookmark-btn" onclick="toggleBookmark('${eng.id}', this)" title="Bookmark">🔖</button>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Pagination
+                const totalPages = data.pages || 1;
+                renderPagination(totalPages);
+            } catch (err) {
+                grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="icon">⚠️</div><h3>Error loading engineers</h3><p>' + err.message + '</p></div>';
+            }
+        }
+
+        function renderPagination(totalPages) {
+            const container = document.getElementById('pagination');
+            if (totalPages <= 1) { container.innerHTML = ''; return; }
+            let html = `<button ${currentPage === 1 ? 'disabled' : ''} onclick="loadEngineers(${currentPage - 1})">← Prev</button>`;
+            for (let i = 1; i <= totalPages; i++) {
+                html += `<button class="${i === currentPage ? 'active' : ''}" onclick="loadEngineers(${i})">${i}</button>`;
+            }
+            html += `<button ${currentPage === totalPages ? 'disabled' : ''} onclick="loadEngineers(${currentPage + 1})">Next →</button>`;
+            container.innerHTML = html;
+        }
+
+        async function toggleBookmark(engineerId, btn) {
+            if (!Auth.isLoggedIn()) { showToast('Please login to bookmark', 'warning'); return; }
+            try {
+                await apiCall('/bookmarks/toggle', { method: 'POST', body: { engineer_id: engineerId } });
+                btn.classList.toggle('active');
+                showToast(btn.classList.contains('active') ? 'Bookmarked!' : 'Removed bookmark', 'success');
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+    </script>
+</body>
+
+</html>

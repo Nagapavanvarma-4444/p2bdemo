@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Engineer Dashboard | PLAN 2 BUILD</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+
+<body>
+    <div id="navbar-placeholder"></div>
+
+    <div class="dashboard-page">
+        <div class="dashboard-container">
+            <aside class="dashboard-sidebar" id="sidebar">
+                <div class="sidebar-user" id="sidebar-user"></div>
+                <nav class="sidebar-nav">
+                    <button class="sidebar-link active" onclick="showTab('overview', this)"><span class="icon">📊</span>
+                        Overview</button>
+                    <button class="sidebar-link" onclick="showTab('profile', this)"><span class="icon">👤</span> My
+                        Profile</button>
+                    <button class="sidebar-link" onclick="showTab('projects', this)"><span class="icon">📋</span> Browse
+                        Projects</button>
+                    <button class="sidebar-link" onclick="showTab('proposals', this)"><span class="icon">📨</span> My
+                        Proposals</button>
+                    <button class="sidebar-link" onclick="showTab('reviews', this)"><span class="icon">⭐</span>
+                        Reviews</button>
+                    <a href="/messages.html" class="sidebar-link"><span class="icon">💬</span> Messages</a>
+                    <a href="/subscription.html" class="sidebar-link"><span class="icon">💎</span> Subscription</a>
+                    <button class="sidebar-link" onclick="showTab('notifications', this)"><span class="icon">🔔</span>
+                        Notifications</button>
+                </nav>
+            </aside>
+            <main class="dashboard-main" id="main-content">
+                <div class="spinner" style="margin:var(--space-4xl) auto"></div>
+            </main>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        let currentTab = 'overview';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
+            const user = Auth.getUser();
+            document.getElementById('sidebar-user').innerHTML = `
+                <div class="avatar">${user.avatar ? `<img src="${user.avatar}">` : user.name.charAt(0)}</div>
+                <div class="sidebar-user-info"><h4>${user.name}</h4><p>${user.category || 'Engineer'}</p></div>
+            `;
+            showTab(currentTab);
+        });
+
+        function showTab(tab, el) {
+            currentTab = tab;
+            document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+            if (el) el.classList.add('active');
+            const main = document.getElementById('main-content');
+            main.innerHTML = '<div class="spinner" style="margin:var(--space-4xl) auto"></div>';
+            switch (tab) {
+                case 'overview': loadOverview(); break;
+                case 'profile': loadProfile(); break;
+                case 'projects': loadAvailableProjects(); break;
+                case 'proposals': loadMyProposals(); break;
+                case 'reviews': loadMyReviews(); break;
+                case 'notifications': loadNotifications(); break;
+            }
+        }
+
+        async function loadOverview() {
+            const main = document.getElementById('main-content');
+            const user = Auth.getUser();
+            try {
+                const [proposalData, subData] = await Promise.all([
+                    apiCall('/proposals/my-proposals').catch(() => ({ proposals: [] })),
+                    apiCall('/subscriptions/status').catch(() => ({ subscription: null }))
+                ]);
+                const proposals = proposalData.proposals || [];
+                const sub = subData.subscription;
+                const accepted = proposals.filter(p => p.status === 'accepted').length;
+                const pending = proposals.filter(p => p.status === 'pending').length;
+
+                main.innerHTML = `
+                    <div class="dashboard-header">
+                        <div><h1>Engineer Dashboard</h1><p class="subtitle">Manage your profile, proposals, and growth</p></div>
+                    </div>
+                    ${sub ? `
+                    <div class="subscription-card" style="margin-bottom:var(--space-2xl)">
+                        <div class="plan-name">💎 ${sub.plan || 'Free'} Plan</div>
+                        <div class="plan-status">${sub.is_active ? `Active until ${formatDate(sub.expires_at)}` : 'Inactive'}</div>
+                    </div>` : `
+                    <div class="subscription-card" style="margin-bottom:var(--space-2xl);cursor:pointer" onclick="window.location.href='/subscription.html'">
+                        <div class="plan-name">🚀 Upgrade Your Plan</div>
+                        <div class="plan-status">Subscribe to access premium features and boost visibility</div>
+                    </div>`}
+                    <div class="stats-grid">
+                        <div class="stat-card"><div class="stat-header"><div class="stat-icon gold">📨</div></div><div class="stat-value">${proposals.length}</div><div class="stat-label">Total Proposals</div></div>
+                        <div class="stat-card"><div class="stat-header"><div class="stat-icon green">✅</div></div><div class="stat-value">${accepted}</div><div class="stat-label">Accepted</div></div>
+                        <div class="stat-card"><div class="stat-header"><div class="stat-icon blue">⏳</div></div><div class="stat-value">${pending}</div><div class="stat-label">Pending</div></div>
+                        <div class="stat-card"><div class="stat-header"><div class="stat-icon gold">⭐</div></div><div class="stat-value">${user.average_rating?.toFixed(1) || '—'}</div><div class="stat-label">Rating</div></div>
+                    </div>
+                    <div class="dashboard-card">
+                        <div class="card-header"><h3>Recent Proposals</h3><a href="#" onclick="showTab('proposals')" style="font-size:0.85rem">View all →</a></div>
+                        <div class="card-body">${proposals.length === 0 ? '<div class="empty-state"><p>No proposals sent yet. Browse open projects to get started!</p></div>' : proposals.slice(0, 5).map(p => `
+                            <div class="proposal-item">
+                                <div class="proposal-content">
+                                    <h4>${p.project_title || 'Project'}</h4>
+                                    <div class="project-meta"><span>💰 ${formatCurrency(p.price || 0)}</span><span>${timeAgo(p.created_at)}</span></div>
+                                </div>
+                                <span class="badge ${p.status === 'accepted' ? 'badge-green' : p.status === 'rejected' ? 'badge-red' : 'badge-blue'}">${p.status}</span>
+                            </div>
+                        `).join('')}</div>
+                    </div>
+                `;
+            } catch (err) {
+                main.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${err.message}</p></div>`;
+            }
+        }
+
+        async function loadProfile() {
+            const main = document.getElementById('main-content');
+            const user = Auth.getUser();
+            main.innerHTML = `
+                <div class="dashboard-header"><div><h1>Edit Profile</h1><p class="subtitle">Keep your profile updated to attract more clients</p></div></div>
+                <form class="dashboard-card" onsubmit="updateProfile(event)" style="padding:var(--space-2xl)">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-lg)">
+                        <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="prof-name" value="${user.name || ''}"></div>
+                        <div class="form-group"><label class="form-label">Phone</label><input type="tel" class="form-input" id="prof-phone" value="${user.phone || ''}"></div>
+                        <div class="form-group"><label class="form-label">Location</label><input type="text" class="form-input" id="prof-location" value="${user.location || ''}"></div>
+                        <div class="form-group"><label class="form-label">Experience (years)</label><input type="number" class="form-input" id="prof-experience" value="${user.experience_years || 0}"></div>
+                    </div>
+                    <div class="form-group"><label class="form-label">Professional Bio</label><textarea class="form-textarea" id="prof-bio" rows="4">${user.bio || ''}</textarea></div>
+                    <div class="form-group"><label class="form-label">Skills (comma-separated)</label><input type="text" class="form-input" id="prof-skills" value="${(user.skills || []).join(', ')}"></div>
+                    <div class="form-group" style="margin-top:var(--space-lg)"><label class="form-label">Upload Avatar</label><input type="file" class="form-input" id="prof-avatar" accept="image/*"></div>
+                    <div style="display:flex;gap:var(--space-md);margin-top:var(--space-xl)">
+                        <button type="submit" class="btn btn-primary btn-lg">Save Changes</button>
+                    </div>
+                </form>
+            `;
+        }
+
+        async function updateProfile(e) {
+            e.preventDefault();
+            try {
+                const body = {
+                    name: document.getElementById('prof-name').value,
+                    phone: document.getElementById('prof-phone').value,
+                    location: document.getElementById('prof-location').value,
+                    experience_years: parseInt(document.getElementById('prof-experience').value),
+                    bio: document.getElementById('prof-bio').value,
+                    skills: document.getElementById('prof-skills').value.split(',').map(s => s.trim()).filter(Boolean)
+                };
+                const data = await apiCall('/engineers/profile', { method: 'PUT', body });
+                if (data.user) Auth.setAuth(Auth.getToken(), { ...Auth.getUser(), ...data.user });
+                showToast('Profile updated!', 'success');
+
+                // Upload avatar if selected
+                const avatarFile = document.getElementById('prof-avatar').files[0];
+                if (avatarFile) {
+                    const fd = new FormData();
+                    fd.append('avatar', avatarFile);
+                    await apiCall('/engineers/avatar', { method: 'POST', body: fd });
+                    showToast('Avatar updated!', 'success');
+                }
+            } catch (err) { showToast(err.message, 'error'); }
+        }
+
+        async function loadAvailableProjects() {
+            const main = document.getElementById('main-content');
+            try {
+                const data = await apiCall('/projects?status=open&limit=20');
+                const projects = data.projects || [];
+                main.innerHTML = `
+                    <div class="dashboard-header"><div><h1>Browse Projects</h1><p class="subtitle">${projects.length} open projects</p></div></div>
+                    <div class="dashboard-card"><div class="card-body">${projects.length === 0 ? '<div class="empty-state"><div class="icon">📋</div><h3>No open projects right now</h3><p>Check back later!</p></div>' : projects.map(p => `
+                        <div class="project-item" style="cursor:pointer" onclick="showProposalModal('${p._id}', '${p.title.replace(/'/g, '')}')">
+                            <div class="project-info">
+                                <h4>${p.title}</h4>
+                                <p style="font-size:0.85rem;color:var(--text-secondary);margin:4px 0">${(p.description || '').substring(0, 100)}...</p>
+                                <div class="project-meta">
+                                    <span>📍 ${p.location}</span>
+                                    <span>🏷️ ${p.category}</span>
+                                    <span>💰 ${p.budget?.min ? formatCurrency(p.budget.min) + ' - ' + formatCurrency(p.budget.max) : 'Flexible'}</span>
+                                    <span>⏰ ${p.timeline || 'Flexible'}</span>
+                                </div>
+                            </div>
+                            <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();showProposalModal('${p._id}', '${p.title.replace(/'/g, '')}')">Send Proposal</button>
+                        </div>
+                    `).join('')}</div></div>
+                `;
+            } catch (err) {
+                main.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${err.message}</p></div>`;
+            }
+        }
+
+        function showProposalModal(projectId, projectTitle) {
+            const overlay = document.createElement('div');
+            overlay.className = 'modal-overlay';
+            overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+            overlay.innerHTML = `
+                <div class="modal">
+                    <div class="modal-header"><h3>Send Proposal</h3><button class="modal-close" onclick="this.closest('.modal-overlay').remove()">×</button></div>
+                    <p style="color:var(--text-secondary);margin-bottom:var(--space-xl);font-size:0.9rem">Project: <strong>${projectTitle}</strong></p>
+                    <form onsubmit="submitProposal(event, '${projectId}')">
+                        <div class="form-group"><label class="form-label">Your Price (₹)</label><input type="number" class="form-input" id="prop-price" required placeholder="e.g., 500000"></div>
+                        <div class="form-group"><label class="form-label">Timeline</label><input type="text" class="form-input" id="prop-timeline" placeholder="e.g., 3 months"></div>
+                        <div class="form-group"><label class="form-label">Cover Letter</label><textarea class="form-textarea" id="prop-letter" rows="4" placeholder="Why are you the best fit for this project?" required></textarea></div>
+                        <button type="submit" class="btn btn-primary btn-block">Submit Proposal</button>
+                    </form>
+                </div>
+            `;
+            document.body.appendChild(overlay);
+        }
+
+        async function submitProposal(e, projectId) {
+            e.preventDefault();
+            try {
+                await apiCall('/proposals', {
+                    method: 'POST', body: {
+                        project_id: projectId,
+                        price: parseInt(document.getElementById('prop-price').value),
+                        timeline: document.getElementById('prop-timeline').value,
+                        cover_letter: document.getElementById('prop-letter').value
+                    }
+                });
+                showToast('Proposal sent!', 'success');
+                document.querySelector('.modal-overlay').remove();
+                loadAvailableProjects();
+            } catch (err) { showToast(err.message, 'error'); }
+        }
+
+        async function loadMyProposals() {
+            const main = document.getElementById('main-content');
+            try {
+                const data = await apiCall('/proposals/my-proposals');
+                const proposals = data.proposals || [];
+                main.innerHTML = `
+                    <div class="dashboard-header"><div><h1>My Proposals</h1><p class="subtitle">${proposals.length} proposals sent</p></div></div>
+                    <div class="dashboard-card"><div class="card-body">${proposals.length === 0 ? '<div class="empty-state"><div class="icon">📨</div><h3>No proposals yet</h3><p>Browse open projects and start sending proposals!</p></div>' : proposals.map(p => `
+                        <div class="proposal-item">
+                            <div class="proposal-content">
+                                <h4>${p.project_title || 'Project'}</h4>
+                                <p>${p.cover_letter ? p.cover_letter.substring(0, 100) + '...' : ''}</p>
+                                <div class="project-meta">
+                                    <span>💰 ${formatCurrency(p.price || 0)}</span>
+                                    <span>⏰ ${p.timeline || ''}</span>
+                                    <span>${timeAgo(p.created_at)}</span>
+                                </div>
+                            </div>
+                            <span class="badge ${p.status === 'accepted' ? 'badge-green' : p.status === 'rejected' ? 'badge-red' : 'badge-blue'}">${p.status}</span>
+                        </div>
+                    `).join('')}</div></div>
+                `;
+            } catch (err) {
+                main.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${err.message}</p></div>`;
+            }
+        }
+
+        async function loadMyReviews() {
+            const main = document.getElementById('main-content');
+            const user = Auth.getUser();
+            try {
+                const data = await apiCall(`/reviews/engineer/${user._id || user.id}`);
+                const reviews = data.reviews || [];
+                main.innerHTML = `
+                    <div class="dashboard-header"><div><h1>My Reviews</h1><p class="subtitle">${reviews.length} reviews • ${user.average_rating?.toFixed(1) || '—'} avg rating</p></div></div>
+                    <div class="dashboard-card"><div class="card-body">${reviews.length === 0 ? '<div class="empty-state"><div class="icon">⭐</div><h3>No reviews yet</h3><p>Complete projects to receive reviews from clients</p></div>' : reviews.map(r => `
+                        <div class="proposal-item">
+                            <div class="avatar avatar-sm">${(r.customer_name || 'C').charAt(0)}</div>
+                            <div class="proposal-content">
+                                <h4 style="font-size:0.9rem">${r.customer_name || 'Customer'}</h4>
+                                <p>${r.comment || ''}</p>
+                                <span style="font-size:0.8rem;color:var(--text-muted)">${formatDate(r.created_at)}</span>
+                            </div>
+                            ${starsHTML(r.rating)}
+                        </div>
+                    `).join('')}</div></div>
+                `;
+            } catch (err) {
+                main.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${err.message}</p></div>`;
+            }
+        }
+
+        async function loadNotifications() {
+            const main = document.getElementById('main-content');
+            try {
+                const data = await apiCall('/notifications');
+                const notifs = data.notifications || [];
+                main.innerHTML = `
+                    <div class="dashboard-header"><div><h1>Notifications</h1></div><button class="btn btn-outline btn-sm" onclick="markAllRead()">Mark all read</button></div>
+                    <div class="dashboard-card"><div class="card-body">${notifs.length === 0 ? '<div class="empty-state"><div class="icon">🔔</div><h3>No notifications</h3></div>' : notifs.map(n => `
+                        <div class="project-item" style="opacity:${n.is_read ? '0.6' : '1'}">
+                            <div style="font-size:1.5rem">${n.type === 'proposal' ? '📨' : n.type === 'message' ? '💬' : '🔔'}</div>
+                            <div class="project-info"><h4 style="font-size:0.95rem">${n.title}</h4><p style="font-size:0.85rem;color:var(--text-muted)">${n.message}</p></div>
+                            <span style="font-size:0.75rem;color:var(--text-muted)">${timeAgo(n.created_at)}</span>
+                        </div>
+                    `).join('')}</div></div>
+                `;
+            } catch (err) {
+                main.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${err.message}</p></div>`;
+            }
+        }
+
+        async function markAllRead() {
+            try {
+                await apiCall('/notifications/mark-all-read', { method: 'PUT' });
+                showToast('All marked as read', 'success');
+                loadNotifications();
+            } catch (err) { showToast(err.message, 'error'); }
+        }
+    </script>
+</body>
+
+</html>

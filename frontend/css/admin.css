@@ -1,0 +1,102 @@
+/* ============================================
+   PLAN 2 BUILD — Admin Panel Styles
+   ============================================ */
+
+.admin-page {
+    padding-top: var(--nav-height);
+}
+
+/* Admin Override Stats */
+.admin-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: var(--space-md);
+    margin-bottom: var(--space-2xl);
+}
+
+.admin-stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    transition: all var(--transition-fast);
+}
+
+.admin-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.admin-stat-card .value {
+    font-family: var(--font-heading);
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--gold);
+}
+
+.admin-stat-card .label {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+/* Approval Queue */
+.approval-card {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    padding: var(--space-lg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-md);
+    background: var(--bg-card);
+    transition: all var(--transition-fast);
+}
+
+.approval-card:hover {
+    border-color: var(--gold);
+}
+
+.approval-info {
+    flex: 1;
+}
+
+.approval-info h4 {
+    font-size: 1rem;
+    margin-bottom: 2px;
+}
+
+.approval-info p {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+
+.approval-actions {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+/* Revenue Chart Placeholder */
+.chart-placeholder {
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-lg);
+    height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+    .admin-stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}

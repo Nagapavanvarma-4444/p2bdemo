@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Engineer Profile | PLAN 2 BUILD</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/engineers.css">
+</head>
+
+<body>
+    <div id="navbar-placeholder"></div>
+
+    <div class="profile-page" id="profile-page">
+        <div class="profile-hero">
+            <div class="container">
+                <div class="profile-hero-content" id="profile-hero-content">
+                    <div class="spinner" style="margin:var(--space-2xl) auto"></div>
+                </div>
+            </div>
+        </div>
+        <div class="profile-body">
+            <div class="container">
+                <div class="profile-grid" id="profile-body-content">
+                    <div class="spinner" style="margin:var(--space-2xl) auto"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="footer-placeholder"></div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', loadProfile);
+
+        async function loadProfile() {
+            const params = new URLSearchParams(window.location.search);
+            const id = params.get('id');
+            if (!id) { showToast('No engineer ID provided', 'error'); return; }
+
+            try {
+                const data = await apiCall(`/engineers/${id}`);
+                const eng = data.engineer;
+                document.title = `${eng.name} | PLAN 2 BUILD`;
+
+                // Hero
+                document.getElementById('profile-hero-content').innerHTML = `
+                    <div class="profile-avatar">
+                        ${eng.avatar ? `<img src="${eng.avatar}" alt="${eng.name}">` : eng.name.charAt(0)}
+                    </div>
+                    <div class="profile-info">
+                        <h1>${eng.name} ${eng.is_verified ? '<span class="badge badge-green" style="font-size:0.7rem;vertical-align:middle">✓ Verified</span>' : ''}</h1>
+                        <div class="category-label">${eng.category || 'Professional'}</div>
+                        <div class="location-label">📍 ${eng.location || 'India'}</div>
+                        <div class="profile-stats-row">
+                            <div class="profile-stat"><div class="value">${eng.average_rating?.toFixed(1) || '—'}</div><div class="label">Rating</div></div>
+                            <div class="profile-stat"><div class="value">${eng.experience_years || 0}</div><div class="label">Years Exp</div></div>
+                            <div class="profile-stat"><div class="value">${eng.completed_projects || 0}</div><div class="label">Projects</div></div>
+                            <div class="profile-stat"><div class="value">${eng.total_reviews || 0}</div><div class="label">Reviews</div></div>
+                        </div>
+                    </div>
+                    <div style="margin-left:auto;display:flex;gap:var(--space-sm);align-self:flex-start">
+                        <a href="/messages.html?to=${eng.id}" class="btn btn-primary">💬 Message</a>
+                        <button class="btn btn-secondary" onclick="toggleBookmark('${eng.id}', this)">🔖 Bookmark</button>
+                    </div>
+                `;
+
+                // Body
+                const portfolioHtml = (eng.portfolio && eng.portfolio.length > 0) ?
+                    `<div class="portfolio-grid">${eng.portfolio.map(p => `
+                        <div class="portfolio-item">
+                            <img src="${p.image_url || p.url || p}" alt="Portfolio">
+                            <div class="overlay"><p>${p.title || 'Project'}</p></div>
+                        </div>
+                    `).join('')}</div>` : '<p class="text-muted">No portfolio items uploaded yet.</p>';
+
+                const certsHtml = (eng.certifications && eng.certifications.length > 0) ?
+                    eng.certifications.map(c => `
+                        <div style="display:flex;align-items:center;gap:var(--space-md);padding:var(--space-md);border:1px solid var(--border-color);border-radius:var(--radius-md);margin-bottom:var(--space-sm)">
+                            <span style="font-size:1.3rem">${c.is_verified ? '✅' : '📄'}</span>
+                            <div>
+                                <strong style="font-size:0.9rem">${c.name || 'Certificate'}</strong>
+                                <p style="font-size:0.8rem;color:var(--text-muted)">${c.is_verified ? 'Verified' : 'Pending verification'}</p>
+                            </div>
+                        </div>
+                    `).join('') : '<p class="text-muted">No certifications uploaded yet.</p>';
+
+                const skillsHtml = (eng.skills && eng.skills.length > 0) ?
+                    `<div class="skills-list">${eng.skills.map(s => `<span class="skill-tag">${s}</span>`).join('')}</div>` :
+                    '<p class="text-muted">No skills listed.</p>';
+
+                document.getElementById('profile-body-content').innerHTML = `
+                    <div>
+                        <div class="profile-section">
+                            <h3>About</h3>
+                            <p style="color:var(--text-secondary);line-height:1.8">${eng.bio || 'This professional has not added a bio yet.'}</p>
+                        </div>
+                        <div class="profile-section">
+                            <h3>Skills & Expertise</h3>
+                            ${skillsHtml}
+                        </div>
+                        <div class="profile-section">
+                            <h3>Portfolio</h3>
+                            ${portfolioHtml}
+                        </div>
+                        <div class="profile-section">
+                            <h3>Reviews</h3>
+                            <div id="reviews-container"><div class="spinner"></div></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="card" style="margin-bottom:var(--space-xl)">
+                            <h4 style="margin-bottom:var(--space-lg)">Contact Information</h4>
+                            <div style="display:flex;flex-direction:column;gap:var(--space-md)">
+                                ${eng.phone ? `<div style="display:flex;align-items:center;gap:var(--space-md);font-size:0.9rem"><span>📱</span>${eng.phone}</div>` : ''}
+                                <div style="display:flex;align-items:center;gap:var(--space-md);font-size:0.9rem"><span>📍</span>${eng.location || 'India'}</div>
+                                <div style="display:flex;align-items:center;gap:var(--space-md);font-size:0.9rem"><span>📅</span>Member since ${formatDate(eng.created_at)}</div>
+                            </div>
+                            <a href="/messages.html?to=${eng.id}" class="btn btn-primary btn-block mt-3">Send Message</a>
+                        </div>
+                        <div class="card">
+                            <h4 style="margin-bottom:var(--space-lg)">Certifications</h4>
+                            ${certsHtml}
+                        </div>
+                    </div>
+                `;
+
+                loadReviews(id);
+            } catch (err) {
+                document.getElementById('profile-hero-content').innerHTML = `<div class="empty-state" style="width:100%"><h3>Engineer not found</h3><p>${err.message}</p><a href="/engineers.html" class="btn btn-primary mt-3">Browse Engineers</a></div>`;
+            }
+        }
+
+        async function loadReviews(engineerId) {
+            const container = document.getElementById('reviews-container');
+            try {
+                const data = await apiCall(`/reviews/engineer/${engineerId}`);
+                const reviews = data.reviews || [];
+                if (reviews.length === 0) {
+                    container.innerHTML = '<p class="text-muted">No reviews yet.</p>';
+                    return;
+                }
+                container.innerHTML = reviews.map(r => `
+                    <div style="padding:var(--space-lg);border:1px solid var(--border-color);border-radius:var(--radius-lg);margin-bottom:var(--space-md)">
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-sm)">
+                            <div style="display:flex;align-items:center;gap:var(--space-md)">
+                                <div class="avatar avatar-sm">
+                                    ${r.reviewer_avatar ? `<img src="${r.reviewer_avatar}" alt="${r.reviewer_name || 'Customer'}">` : (r.reviewer_name || r.customer_name || 'C').charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                    <strong style="font-size:0.9rem">${r.reviewer_name || r.customer_name || 'Customer'}</strong>
+                                    <div style="font-size:0.75rem;color:var(--text-muted)">${formatDate(r.created_at)}</div>
+                                </div>
+                            </div>
+                            ${starsHTML(r.rating)}
+                        </div>
+                        <p style="font-size:0.9rem;color:var(--text-secondary);line-height:1.6">${r.comment || ''}</p>
+                    </div>
+                `).join('');
+            } catch (e) {
+                container.innerHTML = '<p class="text-muted">Could not load reviews.</p>';
+            }
+        }
+
+        async function toggleBookmark(engineerId, btn) {
+            if (!Auth.isLoggedIn()) { showToast('Please login to bookmark', 'warning'); return; }
+            try {
+                await apiCall('/bookmarks/toggle', { method: 'POST', body: { engineer_id: engineerId } });
+                showToast('Bookmark toggled!', 'success');
+            } catch (err) { showToast(err.message, 'error'); }
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Post a Project | PLAN 2 BUILD</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+    <div id="navbar-placeholder"></div>
+
+    <div style="padding-top:calc(var(--nav-height) + 40px);min-height:100vh">
+        <div class="container" style="max-width:720px">
+            <div class="section-heading" style="text-align:left;margin-bottom:var(--space-2xl)">
+                <div class="label">New Project</div>
+                <h2>Post Your Construction Project</h2>
+                <p style="margin:0">Describe your requirements and receive proposals from verified professionals</p>
+            </div>
+
+            <form id="project-form" class="card" onsubmit="handlePostProject(event)" style="padding:var(--space-2xl)">
+                <div class="form-group">
+                    <label class="form-label">Project Title *</label>
+                    <input type="text" class="form-input" id="proj-title"
+                        placeholder="e.g., 2BHK House Construction in Pune" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description *</label>
+                    <textarea class="form-textarea" id="proj-description" rows="5"
+                        placeholder="Describe your project requirements in detail..." required></textarea>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-lg)">
+                    <div class="form-group">
+                        <label class="form-label">Service Category *</label>
+                        <select class="form-select" id="proj-category" required>
+                            <option value="">Select...</option>
+                            <option value="House Construction">House Construction</option>
+                            <option value="Renovation">Renovation</option>
+                            <option value="Interior Design">Interior Design</option>
+                            <option value="Architectural Design">Architectural Design</option>
+                            <option value="Structural Engineering">Structural Engineering</option>
+                            <option value="Electrical Work">Electrical Work</option>
+                            <option value="Plumbing">Plumbing</option>
+                            <option value="Commercial Construction">Commercial Construction</option>
+                            <option value="Landscaping">Landscaping</option>
+                            <option value="Other">Other</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Project Location *</label>
+                        <input type="text" class="form-input" id="proj-location" placeholder="Mumbai, Maharashtra"
+                            required>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-lg)">
+                    <div class="form-group">
+                        <label class="form-label">Budget Range (₹)</label>
+                        <div style="display:flex;gap:var(--space-sm);align-items:center">
+                            <input type="number" class="form-input" id="proj-budget-min" placeholder="Min">
+                            <span style="color:var(--text-muted)">to</span>
+                            <input type="number" class="form-input" id="proj-budget-max" placeholder="Max">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Timeline</label>
+                        <select class="form-select" id="proj-timeline">
+                            <option value="">Select timeline...</option>
+                            <option value="1-3 months">1 - 3 months</option>
+                            <option value="3-6 months">3 - 6 months</option>
+                            <option value="6-12 months">6 - 12 months</option>
+                            <option value="12+ months">12+ months</option>
+                            <option value="Flexible">Flexible</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Upload Plans / Documents</label>
+                    <input type="file" class="form-input" id="proj-files" multiple accept=".pdf,.jpg,.jpeg,.png,.dwg">
+                    <small style="color:var(--text-muted);font-size:0.8rem">PDF, JPG, PNG, DWG — Max 10MB each</small>
+                </div>
+                <div style="display:flex;gap:var(--space-md);margin-top:var(--space-xl)">
+                    <button type="submit" class="btn btn-primary btn-lg" id="post-btn" style="flex:1">Post Project
+                        →</button>
+                    <a href="/customer-dashboard.html" class="btn btn-outline btn-lg">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="footer-placeholder"></div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!Auth.isLoggedIn() || !Auth.isCustomer()) {
+                showToast('Please login as a customer to post projects', 'warning');
+                setTimeout(() => window.location.href = '/login.html', 1500);
+            }
+        });
+
+        async function handlePostProject(e) {
+            e.preventDefault();
+            const btn = document.getElementById('post-btn');
+            btn.disabled = true;
+            btn.textContent = 'Posting...';
+
+            try {
+                const body = {
+                    title: document.getElementById('proj-title').value,
+                    description: document.getElementById('proj-description').value,
+                    category: document.getElementById('proj-category').value,
+                    location: document.getElementById('proj-location').value,
+                    timeline: document.getElementById('proj-timeline').value,
+                    budget: {
+                        min: parseInt(document.getElementById('proj-budget-min').value) || 0,
+                        max: parseInt(document.getElementById('proj-budget-max').value) || 0
+                    }
+                };
+
+                const data = await apiCall('/projects', { method: 'POST', body });
+
+                // Upload files if any
+                const files = document.getElementById('proj-files').files;
+                if (files.length > 0 && data.project_id) {
+                    const formData = new FormData();
+                    for (let f of files) formData.append('files', f);
+                    try {
+                        await apiCall(`/projects/${data.project_id}/upload`, {
+                            method: 'POST',
+                            body: formData
+                        });
+                    } catch (e) { /* files optional */ }
+                }
+
+                showToast('Project posted successfully!', 'success');
+                setTimeout(() => window.location.href = '/customer-dashboard.html', 1000);
+            } catch (err) {
+                showToast(err.message, 'error');
+                btn.disabled = false;
+                btn.textContent = 'Post Project →';
+            }
+        }
+    </script>
+</body>
+
+</html>

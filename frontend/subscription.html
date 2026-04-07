@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pricing Plans | PLAN 2 BUILD</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+    <div id="navbar-placeholder"></div>
+
+    <div style="padding-top:calc(var(--nav-height) + 40px);min-height:100vh">
+        <div class="container">
+            <div class="section-heading">
+                <div class="label">For Engineers</div>
+                <h2>Choose Your Plan</h2>
+                <p>Unlock premium features to grow your construction practice</p>
+            </div>
+
+            <div class="grid grid-3" id="plans-grid" style="max-width:980px;margin:0 auto">
+                <div class="spinner" style="grid-column:1/-1;margin:var(--space-4xl) auto"></div>
+            </div>
+
+            <!-- Features Comparison -->
+            <div style="max-width:980px;margin:var(--space-4xl) auto 0">
+                <h3 style="text-align:center;margin-bottom:var(--space-xl)">Feature Comparison</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Feature</th>
+                                <th>Basic</th>
+                                <th>Professional</th>
+                                <th>Premium</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Monthly Proposals</td>
+                                <td>10</td>
+                                <td>30</td>
+                                <td>Unlimited</td>
+                            </tr>
+                            <tr>
+                                <td>Profile Visibility</td>
+                                <td>Standard</td>
+                                <td>Enhanced</td>
+                                <td>Top Priority</td>
+                            </tr>
+                            <tr>
+                                <td>Search Ranking Boost</td>
+                                <td>—</td>
+                                <td>2x</td>
+                                <td>5x</td>
+                            </tr>
+                            <tr>
+                                <td>Portfolio Uploads</td>
+                                <td>5</td>
+                                <td>20</td>
+                                <td>Unlimited</td>
+                            </tr>
+                            <tr>
+                                <td>Featured Badge</td>
+                                <td>—</td>
+                                <td>—</td>
+                                <td>✅</td>
+                            </tr>
+                            <tr>
+                                <td>Priority Support</td>
+                                <td>—</td>
+                                <td>✅</td>
+                                <td>✅</td>
+                            </tr>
+                            <tr>
+                                <td>Analytics Dashboard</td>
+                                <td>Basic</td>
+                                <td>Advanced</td>
+                                <td>Full Suite</td>
+                            </tr>
+                            <tr>
+                                <td>Certification Badge</td>
+                                <td>—</td>
+                                <td>✅</td>
+                                <td>✅</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="footer-placeholder"></div>
+
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script src="/js/app.js"></script>
+    <script>
+        const plans = [
+            {
+                name: 'Basic', price: 999, period: '/month', color: '#6c757d',
+                features: ['10 proposals/month', 'Standard profile', '5 portfolio uploads', 'Email support', 'Basic analytics'],
+                popular: false
+            },
+            {
+                name: 'Professional', price: 2499, period: '/month', color: '#d4a843',
+                features: ['30 proposals/month', 'Enhanced visibility', '2x search boost', '20 portfolio uploads', 'Priority support', 'Advanced analytics', 'Certification badge'],
+                popular: true
+            },
+            {
+                name: 'Premium', price: 4999, period: '/month', color: '#2563eb',
+                features: ['Unlimited proposals', 'Top priority listing', '5x search boost', 'Unlimited uploads', 'Featured badge', 'Full analytics suite', 'Dedicated support', 'Custom branding'],
+                popular: false
+            }
+        ];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderPlans();
+        });
+
+        function renderPlans() {
+            const grid = document.getElementById('plans-grid');
+            grid.innerHTML = plans.map(plan => `
+                <div class="card" style="text-align:center;position:relative;${plan.popular ? 'border-color:var(--gold);box-shadow:var(--shadow-gold)' : ''}">
+                    ${plan.popular ? '<div style="position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--gold);color:var(--navy);padding:4px 16px;border-radius:var(--radius-full);font-size:0.75rem;font-weight:700;text-transform:uppercase">Most Popular</div>' : ''}
+                    <div style="font-size:2.5rem;margin-bottom:var(--space-sm)">${plan.name === 'Basic' ? '🥉' : plan.name === 'Professional' ? '🥇' : '💎'}</div>
+                    <h3 style="font-size:1.3rem;margin-bottom:var(--space-sm)">${plan.name}</h3>
+                    <div style="margin:var(--space-lg) 0">
+                        <span style="font-family:var(--font-heading);font-size:2.5rem;font-weight:800;color:var(--gold)">₹${plan.price.toLocaleString()}</span>
+                        <span style="color:var(--text-muted);font-size:0.9rem">${plan.period}</span>
+                    </div>
+                    <div style="text-align:left;margin:var(--space-xl) 0">
+                        ${plan.features.map(f => `<div style="display:flex;align-items:center;gap:8px;padding:8px 0;font-size:0.9rem;color:var(--text-secondary)"><span style="color:var(--success)">✓</span> ${f}</div>`).join('')}
+                    </div>
+                    <button class="btn ${plan.popular ? 'btn-primary' : 'btn-secondary'} btn-block btn-lg" onclick="subscribe('${plan.name}', ${plan.price})">
+                        Choose ${plan.name}
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        async function subscribe(planName, amount) {
+            if (!Auth.isLoggedIn()) {
+                showToast('Please login first', 'warning');
+                window.location.href = '/login.html';
+                return;
+            }
+            if (!Auth.isEngineer()) {
+                showToast('Only engineers can subscribe', 'warning');
+                return;
+            }
+
+            try {
+                const orderData = await apiCall('/subscriptions/create-order', {
+                    method: 'POST',
+                    body: { plan: planName.toLowerCase(), amount: amount * 100 }
+                });
+
+                const options = {
+                    key: orderData.razorpay_key,
+                    amount: orderData.order.amount,
+                    currency: 'INR',
+                    name: 'PLAN 2 BUILD',
+                    description: `${planName} Plan Subscription`,
+                    order_id: orderData.order.id,
+                    handler: async function (response) {
+                        try {
+                            await apiCall('/subscriptions/verify', {
+                                method: 'POST',
+                                body: {
+                                    razorpay_order_id: response.razorpay_order_id,
+                                    razorpay_payment_id: response.razorpay_payment_id,
+                                    razorpay_signature: response.razorpay_signature,
+                                    plan: planName.toLowerCase()
+                                }
+                            });
+                            showToast(`${planName} plan activated!`, 'success');
+                            setTimeout(() => window.location.href = '/engineer-dashboard.html', 1500);
+                        } catch (err) {
+                            showToast('Payment verification failed: ' + err.message, 'error');
+                        }
+                    },
+                    prefill: {
+                        name: Auth.getUser().name,
+                        email: Auth.getUser().email
+                    },
+                    theme: { color: '#d4a843' }
+                };
+
+                const rzp = new Razorpay(options);
+                rzp.open();
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+    </script>
+</body>
+
+</html>

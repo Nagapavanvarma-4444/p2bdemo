@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Us | PLAN 2 BUILD</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+    <div id="navbar-placeholder"></div>
+
+    <div style="padding-top:calc(var(--nav-height) + 40px);min-height:100vh">
+        <div class="container" style="max-width:900px">
+            <div class="section-heading">
+                <div class="label">Contact</div>
+                <h2>Get In Touch</h2>
+                <p>Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
+                </p>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-2xl)">
+                <div class="card" style="padding:var(--space-2xl)">
+                    <h3 style="margin-bottom:var(--space-xl)">Send us a message</h3>
+                    <form onsubmit="handleContact(event)">
+                        <div class="form-group">
+                            <label class="form-label">Your Name</label>
+                            <input type="text" class="form-input" id="contact-name" required placeholder="John Doe">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email Address</label>
+                            <input type="email" class="form-input" id="contact-email" required
+                                placeholder="you@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Subject</label>
+                            <input type="text" class="form-input" id="contact-subject" required
+                                placeholder="How can we help?">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Message</label>
+                            <textarea class="form-textarea" id="contact-message" rows="5" required
+                                placeholder="Tell us about your query..."></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-lg btn-block">Send Message →</button>
+                    </form>
+                </div>
+                <div>
+                    <div class="card" style="padding:var(--space-2xl);margin-bottom:var(--space-xl)">
+                        <h3 style="margin-bottom:var(--space-xl)">Contact Information</h3>
+                        <div style="display:flex;flex-direction:column;gap:var(--space-xl)">
+                            <div style="display:flex;gap:var(--space-md)">
+                                <div
+                                    style="width:44px;height:44px;background:rgba(212,168,67,0.15);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">
+                                    📧</div>
+                                <div><strong style="font-size:0.9rem">Email</strong>
+                                    <p style="color:var(--text-muted);font-size:0.9rem">support@plan2build.com</p>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:var(--space-md)">
+                                <div
+                                    style="width:44px;height:44px;background:rgba(212,168,67,0.15);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">
+                                    📱</div>
+                                <div><strong style="font-size:0.9rem">Phone</strong>
+                                    <p style="color:var(--text-muted);font-size:0.9rem">+91 98765 43210</p>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:var(--space-md)">
+                                <div
+                                    style="width:44px;height:44px;background:rgba(212,168,67,0.15);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">
+                                    📍</div>
+                                <div><strong style="font-size:0.9rem">Office</strong>
+                                    <p style="color:var(--text-muted);font-size:0.9rem">Mumbai, Maharashtra, India</p>
+                                </div>
+                            </div>
+                            <div style="display:flex;gap:var(--space-md)">
+                                <div
+                                    style="width:44px;height:44px;background:rgba(212,168,67,0.15);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0">
+                                    ⏰</div>
+                                <div><strong style="font-size:0.9rem">Hours</strong>
+                                    <p style="color:var(--text-muted);font-size:0.9rem">Mon - Sat, 9 AM - 7 PM IST</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card"
+                        style="padding:var(--space-2xl);background:linear-gradient(135deg,var(--navy-mid),var(--navy-light));border-color:transparent">
+                        <h3 style="color:var(--gold);margin-bottom:var(--space-md)">Need urgent help?</h3>
+                        <p style="color:var(--gray-300);font-size:0.9rem;line-height:1.7">Premium subscribers get
+                            priority support with guaranteed 2-hour response times.</p>
+                        <a href="/subscription.html" class="btn btn-primary mt-3">View Plans →</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="footer-placeholder"></div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        function handleContact(e) {
+            e.preventDefault();
+            showToast('Thank you! We\'ll get back to you within 24 hours.', 'success');
+            e.target.reset();
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messages | PLAN 2 BUILD</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/messages.css">
+</head>
+
+<body>
+    <div id="navbar-placeholder"></div>
+
+    <div class="messages-page">
+        <div class="messages-container">
+            <!-- Conversation List -->
+            <div class="conversations-panel" id="conversations-panel">
+                <div class="conversations-header">
+                    <h2>Messages</h2>
+                    <div class="conversations-search">
+                        <input type="text" class="form-input" placeholder="Search conversations..."
+                            oninput="filterConversations(this.value)">
+                    </div>
+                </div>
+                <div class="conversations-list" id="conversations-list">
+                    <div class="empty-state" style="padding:var(--space-2xl)">
+                        <div class="spinner" style="margin:0 auto"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Panel -->
+            <div class="chat-panel" id="chat-panel">
+                <div class="chat-empty">
+                    <div class="icon">💬</div>
+                    <h3>Select a conversation</h3>
+                    <p>Choose a conversation from the left panel to start messaging</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="/js/app.js"></script>
+    <script>
+        let socket;
+        let activeConversation = null;
+        let allConversations = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!Auth.isLoggedIn()) { window.location.href = '/login.html'; return; }
+            initSocket();
+            loadConversations();
+
+            // Check if directed to specific user
+            const params = new URLSearchParams(window.location.search);
+            const toUser = params.get('to');
+            if (toUser) openChatWith(toUser);
+        });
+
+        function initSocket() {
+            socket = io(window.location.origin, { auth: { token: Auth.getToken() } });
+            const user = Auth.getUser();
+            socket.on('connect', () => socket.emit('register_user', { user_id: user._id || user.id }));
+            socket.on('new_message', msg => {
+                if (activeConversation && (msg.sender_id === activeConversation || msg.receiver_id === activeConversation)) {
+                    appendMessage(msg, false);
+                    scrollToBottom();
+                    socket.emit('mark_read', { conversation_id: msg.conversation_id, reader_id: user._id || user.id });
+                }
+                loadConversations();
+            });
+            socket.on('user_online', data => updateOnlineStatus(data.user_id, true));
+            socket.on('user_offline', data => updateOnlineStatus(data.user_id, false));
+            socket.on('user_typing', data => {
+                if (data.user_id === activeConversation) showTyping();
+            });
+            socket.on('user_stop_typing', () => hideTyping());
+        }
+
+        async function loadConversations() {
+            try {
+                const data = await apiCall('/messages/conversations');
+                allConversations = data.conversations || [];
+                renderConversations(allConversations);
+            } catch (err) {
+                document.getElementById('conversations-list').innerHTML = '<div class="empty-state"><p>Could not load conversations</p></div>';
+            }
+        }
+
+        function renderConversations(convs) {
+            const list = document.getElementById('conversations-list');
+            if (convs.length === 0) {
+                list.innerHTML = '<div class="empty-state" style="padding:var(--space-2xl)"><p>No conversations yet</p></div>';
+                return;
+            }
+            list.innerHTML = convs.map(c => `
+                <div class="conversation-item ${activeConversation === c.other_user_id ? 'active' : ''}" onclick="openChat('${c.other_user_id}', '${(c.other_user_name || '').replace(/'/g, '')}', '${c.other_user_avatar || ''}')">
+                    <div class="avatar">${c.other_user_avatar ? `<img src="${c.other_user_avatar}">` : (c.other_user_name || 'U').charAt(0)}</div>
+                    <div class="conversation-info">
+                        <div class="name">${c.other_user_name || 'User'}</div>
+                        <div class="last-message">${c.last_message || 'Start a conversation'}</div>
+                    </div>
+                    <div class="conversation-meta">
+                        <div class="time">${c.last_message_time ? timeAgo(c.last_message_time) : ''}</div>
+                        ${c.unread_count > 0 ? `<div class="unread">${c.unread_count}</div>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterConversations(query) {
+            const filtered = allConversations.filter(c =>
+                (c.other_user_name || '').toLowerCase().includes(query.toLowerCase())
+            );
+            renderConversations(filtered);
+        }
+
+        async function openChatWith(userId) {
+            // When directed from another page, fetch user info and open chat
+            try {
+                const data = await apiCall(`/engineers/${userId}`);
+                openChat(userId, data.engineer.name, data.engineer.avatar || '');
+            } catch (e) {
+                openChat(userId, 'User', '');
+            }
+        }
+
+        async function openChat(userId, name, avatar) {
+            activeConversation = userId;
+            const user = Auth.getUser();
+            const chatPanel = document.getElementById('chat-panel');
+
+            chatPanel.innerHTML = `
+                <div class="chat-header">
+                    <div class="avatar">${avatar ? `<img src="${avatar}">` : name.charAt(0)}</div>
+                    <div class="chat-header-info">
+                        <h3>${name}</h3>
+                        <div class="status" id="online-status">Offline</div>
+                    </div>
+                </div>
+                <div class="chat-messages" id="chat-messages">
+                    <div class="spinner" style="margin:auto"></div>
+                </div>
+                <div id="typing-indicator" style="display:none;padding:4px var(--space-xl)">
+                    <div class="typing-indicator"><span></span><span></span><span></span></div>
+                </div>
+                <div class="chat-input-area">
+                    <div class="chat-input-wrapper">
+                        <input type="text" class="form-input" id="message-input" placeholder="Type a message..." onkeydown="handleKeyDown(event)" oninput="handleTyping()">
+                        <button class="chat-send-btn" onclick="sendMessage()">➤</button>
+                    </div>
+                </div>
+            `;
+
+            // Update active state in conversation list
+            document.querySelectorAll('.conversation-item').forEach(i => i.classList.remove('active'));
+            document.querySelectorAll('.conversation-item').forEach(i => {
+                if (i.onclick.toString().includes(userId)) i.classList.add('active');
+            });
+
+            // Load messages
+            try {
+                const data = await apiCall(`/messages/${userId}`);
+                const messages = data.messages || [];
+                const msgContainer = document.getElementById('chat-messages');
+                msgContainer.innerHTML = messages.map(m => {
+                    const isSent = (m.sender_id === (user._id || user.id));
+                    return `<div class="message-bubble ${isSent ? 'sent' : 'received'}">
+                        <div>${m.content}</div>
+                        <div class="message-time">${timeAgo(m.created_at)}</div>
+                    </div>`;
+                }).join('');
+                scrollToBottom();
+
+                // Mark as read
+                socket.emit('mark_read', { conversation_id: null, reader_id: user._id || user.id });
+            } catch (e) {
+                document.getElementById('chat-messages').innerHTML = '<div class="empty-state"><p>Start a conversation!</p></div>';
+            }
+        }
+
+        function appendMessage(msg, isSent) {
+            const container = document.getElementById('chat-messages');
+            if (!container) return;
+            container.innerHTML += `
+                <div class="message-bubble ${isSent ? 'sent' : 'received'}">
+                    <div>${msg.content}</div>
+                    <div class="message-time">just now</div>
+                </div>
+            `;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const content = input.value.trim();
+            if (!content || !activeConversation) return;
+
+            const user = Auth.getUser();
+            socket.emit('send_message', {
+                sender_id: user._id || user.id,
+                receiver_id: activeConversation,
+                content: content
+            });
+
+            appendMessage({ content }, true);
+            scrollToBottom();
+            input.value = '';
+        }
+
+        function handleKeyDown(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        }
+
+        let typingTimeout;
+        function handleTyping() {
+            const user = Auth.getUser();
+            socket.emit('typing', { sender_id: user._id || user.id, receiver_id: activeConversation });
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                socket.emit('stop_typing', { sender_id: user._id || user.id, receiver_id: activeConversation });
+            }, 2000);
+        }
+
+        function showTyping() {
+            const el = document.getElementById('typing-indicator');
+            if (el) el.style.display = 'block';
+        }
+
+        function hideTyping() {
+            const el = document.getElementById('typing-indicator');
+            if (el) el.style.display = 'none';
+        }
+
+        function scrollToBottom() {
+            const container = document.getElementById('chat-messages');
+            if (container) container.scrollTop = container.scrollHeight;
+        }
+
+        function updateOnlineStatus(userId, online) {
+            if (userId === activeConversation) {
+                const el = document.getElementById('online-status');
+                if (el) {
+                    el.textContent = online ? 'Online' : 'Offline';
+                    el.className = `status ${online ? 'online' : ''}`;
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
