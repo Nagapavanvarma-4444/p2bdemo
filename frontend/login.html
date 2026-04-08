@@ -96,7 +96,12 @@
                     else window.location.href = '/customer-dashboard.html';
                 }, 500);
             } catch (err) {
-                showToast(err.message, 'error');
+                if (err.message.includes('Under Construction')) {
+                    showToast('🏗️ Under Construction: We\'ll be back online shortly.', 'warning');
+                    // Optional: You could also show a dedicated alert box here
+                } else {
+                    showToast(err.message, 'error');
+                }
                 btn.disabled = false;
                 btn.textContent = 'Sign In';
             }

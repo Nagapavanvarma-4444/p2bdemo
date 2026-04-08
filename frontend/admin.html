@@ -11,6 +11,19 @@
 </head>
 
 <body>
+    <script>
+        // CRITICAL: Block unauthorized access before rendering any content
+        (function() {
+            // Using the same key as defined in JS/app.js
+            const userStr = localStorage.getItem('p2b_user');
+            const token = localStorage.getItem('p2b_token');
+            const user = userStr ? JSON.parse(userStr) : null;
+            
+            if (!token || !user || user.role !== 'admin') {
+                window.location.replace('/login.html');
+            }
+        })();
+    </script>
     <div id="navbar-placeholder"></div>
 
     <div class="dashboard-page admin-page">
@@ -70,33 +83,34 @@
         async function loadAdminDashboard() {
             const main = document.getElementById('main-content');
             try {
-                const data = await apiCall('/admin/dashboard');
-                const stats = data.stats || {};
+                const [statsData, settingsData] = await Promise.all([
+                    apiCall('/admin/dashboard'),
+                    apiCall('/admin/settings')
+                ]);
+                const stats = statsData.stats || {};
+                const settings = settingsData.settings || {};
+                
                 main.innerHTML = `
                     <div class="dashboard-header"><div><h1>Admin Dashboard</h1><p class="subtitle">Overview of the platform</p></div></div>
+                    
+                    <div class="dashboard-card" style="margin-bottom:var(--space-xl); border-left:4px solid ${settings.maintenance_mode ? 'var(--red)' : 'var(--green)'}">
+                        <div class="card-body" style="display:flex; justify-content:space-between; align-items:center; padding:var(--space-xl)">
+                            <div>
+                                <h3 style="margin:0">Maintenance Mode</h3>
+                                <p style="margin:0; font-size:0.9rem; color:var(--text-muted)">Current: ${settings.maintenance_mode ? '<span class="text-danger">ON (Site Restricted)</span>' : '<span class="text-success">OFF (Site Public)</span>'}</p>
+                            </div>
+                            <button class="btn ${settings.maintenance_mode ? 'btn-success' : 'btn-danger'}" onclick="toggleMaintenance(${!settings.maintenance_mode})">
+                                ${settings.maintenance_mode ? 'Turn OFF' : 'Turn ON'} Maintenance
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="admin-stats-grid">
                         <div class="admin-stat-card"><div class="value">${stats.total_users || 0}</div><div class="label">Total Users</div></div>
                         <div class="admin-stat-card"><div class="value">${stats.total_engineers || 0}</div><div class="label">Engineers</div></div>
                         <div class="admin-stat-card"><div class="value">${stats.total_customers || 0}</div><div class="label">Customers</div></div>
                         <div class="admin-stat-card"><div class="value">${stats.total_projects || 0}</div><div class="label">Projects</div></div>
-                        <div class="admin-stat-card"><div class="value">${stats.pending_approvals || 0}</div><div class="label">Pending Approvals</div></div>
-                    </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-xl)">
-                        <div class="dashboard-card">
-                            <div class="card-header"><h3>Platform Revenue</h3></div>
-                            <div class="card-body">
-                                <div class="chart-placeholder">📊 Revenue analytics will appear here when subscriptions are active</div>
-                            </div>
-                        </div>
-                        <div class="dashboard-card">
-                            <div class="card-header"><h3>Recent Activity</h3></div>
-                            <div class="card-body">
-                                <div style="padding:var(--space-lg);text-align:center;color:var(--text-muted)">
-                                    <p>Recent registrations and activities</p>
-                                    <p style="font-size:0.85rem">Active monitoring available</p>
-                                </div>
-                            </div>
-                        </div>
+                        <div class="admin-stat-card"><div class="value">${stats.pending_approvals || 0}</div><div class="label">Pending Vetting</div></div>
                     </div>
                 `;
             } catch (err) {
@@ -104,25 +118,33 @@
             }
         }
 
+        async function toggleMaintenance(value) {
+            if (!confirm(`Are you sure you want to turn Maintenance Mode ${value ? 'ON' : 'OFF'}?`)) return;
+            try {
+                await apiCall('/admin/settings', { method: 'PUT', body: { maintenance_mode: value } });
+                showToast(`Maintenance Mode is now ${value ? 'active' : 'inactive'}`, 'success');
+                loadAdminDashboard();
+            } catch (err) { showToast(err.message, 'error'); }
+        }
+
         async function loadUsers() {
             const main = document.getElementById('main-content');
             try {
-                const data = await apiCall('/admin/users?limit=50');
+                const data = await apiCall('/admin/users?limit=50&role=engineer');
                 const users = data.users || [];
                 main.innerHTML = `
-                    <div class="dashboard-header"><div><h1>User Management</h1><p class="subtitle">${users.length} users</p></div></div>
+                    <div class="dashboard-header"><div><h1>Verified Badge Management</h1><p class="subtitle">Award badges to reliable engineers</p></div></div>
                     <div class="table-container">
                         <table>
-                            <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
+                            <thead><tr><th>Name</th><th>Verification</th><th>Status</th><th>Joined</th><th>Actions</th></tr></thead>
                             <tbody>${users.map(u => `
                                 <tr>
                                     <td><div style="display:flex;align-items:center;gap:var(--space-sm)"><div class="avatar avatar-sm">${u.name.charAt(0)}</div>${u.name}</div></td>
-                                    <td>${u.email}</td>
-                                    <td><span class="badge ${u.role === 'admin' ? 'badge-gold' : u.role === 'engineer' ? 'badge-blue' : 'badge-gray'}">${u.role}</span></td>
-                                    <td><span class="badge ${u.is_active !== false ? 'badge-green' : 'badge-red'}">${u.is_active !== false ? 'Active' : 'Inactive'}</span></td>
+                                    <td>${u.is_verified ? '<span class="badge badge-gold">✓ Verified Badge</span>' : '<span class="badge badge-gray">Not Verified</span>'}</td>
+                                    <td><span class="badge ${u.is_approved !== false ? 'badge-green' : 'badge-red'}">${u.is_approved !== false ? 'Approved' : 'Pending'}</span></td>
                                     <td>${formatDate(u.created_at)}</td>
                                     <td>
-                                        ${u.role === 'engineer' ? `<button class="btn btn-sm btn-outline" onclick="toggleFeatured('${u._id}')">⭐</button>` : ''}
+                                        <button class="btn btn-sm btn-outline" onclick="viewEngineer('${u._id}')">Review & Badge</button>
                                     </td>
                                 </tr>
                             `).join('')}</tbody>
@@ -137,11 +159,11 @@
         async function loadApprovals() {
             const main = document.getElementById('main-content');
             try {
-                const data = await apiCall('/admin/pending-engineers');
-                const pending = data.engineers || [];
+                const data = await apiCall('/admin/users?role=engineer&approved=false');
+                const pending = data.users || [];
                 main.innerHTML = `
-                    <div class="dashboard-header"><div><h1>Engineer Approvals</h1><p class="subtitle">${pending.length} pending</p></div></div>
-                    ${pending.length === 0 ? '<div class="empty-state" style="padding:var(--space-4xl)"><div class="icon">✅</div><h3>All caught up!</h3><p>No pending approvals</p></div>' : pending.map(eng => `
+                    <div class="dashboard-header"><div><h1>New Registrations</h1><p class="subtitle">${pending.length} engineers awaiting approval</p></div></div>
+                    ${pending.length === 0 ? '<div class="empty-state" style="padding:var(--space-4xl)"><div class="icon">✅</div><h3>All caught up!</h3><p>No pending registration approvals</p></div>' : pending.map(eng => `
                         <div class="approval-card">
                             <div class="avatar">${eng.name.charAt(0)}</div>
                             <div class="approval-info">
@@ -149,8 +171,9 @@
                                 <p>${eng.category || 'Engineer'} • ${eng.location || 'India'} • Joined ${formatDate(eng.created_at)}</p>
                             </div>
                             <div class="approval-actions">
-                                <button class="btn btn-success btn-sm" onclick="approveEngineer('${eng._id}')">Approve</button>
-                                <button class="btn btn-danger btn-sm" onclick="rejectEngineer('${eng._id}')">Reject</button>
+                                <button class="btn btn-outline btn-sm" onclick="viewEngineer('${eng._id}')">Examine Docs</button>
+                                <button class="btn btn-success btn-sm" onclick="approveEngineer('${eng._id}', true)">Approve</button>
+                                <button class="btn btn-danger btn-sm" onclick="approveEngineer('${eng._id}', false)">Reject</button>
                             </div>
                         </div>
                     `).join('')}
@@ -160,28 +183,71 @@
             }
         }
 
-        async function approveEngineer(id) {
+        async function viewEngineer(id) {
             try {
-                await apiCall(`/admin/engineers/${id}/approve`, { method: 'PUT' });
-                showToast('Engineer approved!', 'success');
-                loadApprovals();
+                const data = await apiCall(`/admin/engineers/${id}`);
+                const eng = data.engineer;
+                const modal = document.createElement('div');
+                modal.className = 'modal-overlay';
+                modal.id = 'eng-modal';
+                modal.innerHTML = `
+                    <div class="modal-content" style="max-width:800px">
+                        <div class="modal-header">
+                            <div><h3>Engineer Review: ${eng.name}</h3><p>${eng.category}</p></div>
+                            <button class="modal-close" onclick="closeModal()">✕</button>
+                        </div>
+                        <div class="modal-body">
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--space-xl)">
+                                <div>
+                                    <h4>Personal Data</h4>
+                                    <p><strong>Email:</strong> ${eng.email}</p>
+                                    <p><strong>Phone:</strong> ${eng.phone || 'N/A'}</p>
+                                    <p><strong>Location:</strong> ${eng.location || 'N/A'}</p>
+                                    <p><strong>Bio:</strong> ${eng.bio || 'No bio provided'}</p>
+                                </div>
+                                <div>
+                                    <h4>Uploaded Certificates</h4>
+                                    ${!eng.certifications || eng.certifications.length === 0 ? '<p>No documents uploaded</p>' : eng.certifications.map(c => `
+                                        <div style="margin-bottom:10px; padding:10px; background:var(--bg-card); border-radius:var(--radius-sm); display:flex; justify-content:space-between; align-items:center">
+                                            <span>${c.name}</span>
+                                            <a href="${c.url}" target="_blank" class="btn btn-sm btn-primary">View File</a>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer" style="display:flex; justify-content:space-between">
+                            <div>
+                                <button class="btn ${eng.is_verified ? 'btn-danger' : 'btn-success'}" onclick="toggleBadge('${eng._id}', ${!eng.is_verified})">
+                                    ${eng.is_verified ? 'Remove Verified Badge' : 'Award Verified Badge'}
+                                </button>
+                            </div>
+                            <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modal);
             } catch (err) { showToast(err.message, 'error'); }
         }
 
-        async function rejectEngineer(id) {
-            if (!confirm('Are you sure you want to reject this engineer?')) return;
-            try {
-                await apiCall(`/admin/engineers/${id}/reject`, { method: 'PUT' });
-                showToast('Engineer rejected', 'info');
-                loadApprovals();
-            } catch (err) { showToast(err.message, 'error'); }
+        function closeModal() {
+            document.getElementById('eng-modal')?.remove();
         }
 
-        async function toggleFeatured(id) {
+        async function toggleBadge(id, value) {
             try {
-                await apiCall(`/admin/engineers/${id}/featured`, { method: 'PUT' });
-                showToast('Featured status updated', 'success');
+                await apiCall(`/admin/engineers/${id}/verify-badge`, { method: 'PUT', body: { verified: value } });
+                showToast(`Verified badge ${value ? 'awarded' : 'removed'}`, 'success');
+                closeModal();
                 loadUsers();
+            } catch (err) { showToast(err.message, 'error'); }
+        }
+
+        async function approveEngineer(id, value) {
+            try {
+                await apiCall(`/admin/engineers/${id}/approve`, { method: 'PUT', body: { approved: value } });
+                showToast(`Engineer ${value ? 'approved' : 'rejected'}`, 'success');
+                loadApprovals();
             } catch (err) { showToast(err.message, 'error'); }
         }
 
@@ -191,18 +257,17 @@
                 const data = await apiCall('/projects?limit=50');
                 const projects = data.projects || [];
                 main.innerHTML = `
-                    <div class="dashboard-header"><div><h1>All Projects</h1><p class="subtitle">${projects.length} projects</p></div></div>
+                    <div class="dashboard-header"><div><h1>Global Projects Monitor</h1><p class="subtitle">${projects.length} total projects</p></div></div>
                     <div class="table-container">
                         <table>
-                            <thead><tr><th>Title</th><th>Customer</th><th>Category</th><th>Location</th><th>Status</th><th>Created</th></tr></thead>
+                            <thead><tr><th>Title</th><th>Customer</th><th>Category</th><th>Status</th><th>Actions</th></tr></thead>
                             <tbody>${projects.map(p => `
                                 <tr>
                                     <td><strong>${p.title}</strong></td>
                                     <td>${p.customer_name || '—'}</td>
                                     <td>${p.category}</td>
-                                    <td>${p.location}</td>
                                     <td><span class="badge ${p.status === 'open' ? 'badge-green' : p.status === 'in_progress' ? 'badge-blue' : 'badge-gray'}">${p.status}</span></td>
-                                    <td>${formatDate(p.created_at)}</td>
+                                    <td><button class="btn btn-sm btn-outline" disabled>Monitor</button></td>
                                 </tr>
                             `).join('')}</tbody>
                         </table>
@@ -212,6 +277,7 @@
                 main.innerHTML = `<div class="empty-state"><h3>Error</h3><p>${err.message}</p></div>`;
             }
         }
+    </script>
     </script>
 </body>
 

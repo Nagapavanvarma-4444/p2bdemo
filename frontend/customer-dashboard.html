@@ -19,6 +19,8 @@
                 <nav class="sidebar-nav">
                     <button class="sidebar-link active" onclick="showTab('overview', this)"><span class="icon">📊</span>
                         Overview</button>
+                    <button class="sidebar-link" onclick="showTab('profile', this)"><span class="icon">👤</span> My
+                        Profile</button>
                     <button class="sidebar-link" onclick="showTab('projects', this)"><span class="icon">📋</span> My
                         Projects</button>
                     <button class="sidebar-link" onclick="showTab('proposals', this)"><span class="icon">📨</span>
@@ -64,6 +66,7 @@
 
             switch (tab) {
                 case 'overview': loadOverview(); break;
+                case 'profile': loadProfile(); break;
                 case 'projects': loadProjects(); break;
                 case 'proposals': loadProposals(); break;
                 case 'bookmarks': loadBookmarks(); break;
@@ -265,6 +268,81 @@
                 showToast('All notifications marked as read', 'success');
                 loadNotifications();
             } catch (err) { showToast(err.message, 'error'); }
+        }
+
+        async function loadProfile() {
+            const main = document.getElementById('main-content');
+            const user = Auth.getUser();
+            main.innerHTML = `
+                <div class="dashboard-header"><div><h1>My Profile</h1><p class="subtitle">Manage your personal information and profile picture</p></div></div>
+                <form class="dashboard-card" onsubmit="updateProfile(event)" style="padding:var(--space-2xl)">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-lg)">
+                        <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="prof-name" value="${user.name || ''}" required></div>
+                        <div class="form-group"><label class="form-label">Phone Number</label><input type="tel" class="form-input" id="prof-phone" value="${user.phone || ''}"></div>
+                    </div>
+                    <div class="form-group"><label class="form-label">Address / Location</label><input type="text" class="form-input" id="prof-location" value="${user.location || ''}"></div>
+                    <div class="form-group" style="margin-top:var(--space-lg)">
+                        <label class="form-label">Profile Picture</label>
+                        <div style="display:flex;align-items:center;gap:var(--space-lg);margin-top:var(--space-sm)">
+                            <div class="avatar avatar-xl" id="avatar-preview">
+                                ${user.avatar ? `<img src="${user.avatar}">` : user.name.charAt(0)}
+                            </div>
+                            <input type="file" class="form-input" id="prof-avatar" accept="image/*" style="flex:1">
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:var(--space-md);margin-top:var(--space-xl)">
+                        <button type="submit" class="btn btn-primary btn-lg">Save Changes</button>
+                    </div>
+                </form>
+            `;
+        }
+
+        async function updateProfile(e) {
+            e.preventDefault();
+            const saveBtn = e.target.querySelector('button[type="submit"]');
+            const originalText = saveBtn.textContent;
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
+            try {
+                // 1. Update text fields
+                const body = {
+                    name: document.getElementById('prof-name').value,
+                    phone: document.getElementById('prof-phone').value,
+                    location: document.getElementById('prof-location').value
+                };
+                
+                const profileResponse = await apiCall('/auth/profile', { method: 'PUT', body });
+                let updatedUser = profileResponse.user;
+                
+                // 2. Upload avatar if selected
+                const avatarFile = document.getElementById('prof-avatar').files[0];
+                if (avatarFile) {
+                    const fd = new FormData();
+                    fd.append('avatar', avatarFile);
+                    const avatarResponse = await apiCall('/auth/avatar', { method: 'POST', body: fd });
+                    if (avatarResponse.url) updatedUser.avatar = avatarResponse.url;
+                }
+
+                // Update local storage and UI
+                Auth.setAuth(Auth.getToken(), updatedUser);
+                showToast('Profile updated successfully!', 'success');
+                
+                // Refresh sidebar
+                document.getElementById('sidebar-user').innerHTML = `
+                    <div class="avatar">${updatedUser.avatar ? `<img src="${updatedUser.avatar}">` : updatedUser.name.charAt(0)}</div>
+                    <div class="sidebar-user-info"><h4>${updatedUser.name}</h4><p>Customer</p></div>
+                `;
+                
+                // Reload profile tab
+                loadProfile();
+            } catch (err) { 
+                console.error('Profile update error:', err);
+                showToast(err.message || 'Failed to update profile', 'error'); 
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = originalText;
+            }
         }
     </script>
 </body>

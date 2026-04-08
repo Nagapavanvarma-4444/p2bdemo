@@ -63,6 +63,8 @@ async function apiCall(endpoint, options = {}) {
     }
 
     try {
+        console.log(`[API Call] ${options.method || 'GET'} ${endpoint}`, { headers, hasBody: !!options.body });
+        
         const response = await fetch(url, {
             ...options,
             headers,
@@ -70,16 +72,18 @@ async function apiCall(endpoint, options = {}) {
                   options.body ? JSON.stringify(options.body) : undefined
         });
 
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-            throw new Error(data.error || data.message || 'Request failed');
+            console.error(`[API Error] ${endpoint}:`, data);
+            throw new Error(data.error || data.message || `Request failed (${response.status})`);
         }
 
         return data;
     } catch (error) {
-        if (error.message.includes('Token has expired') || error.message.includes('Invalid token')) {
-            Auth.logout();
+        console.error(`[API Exception] ${endpoint}:`, error);
+        if (error.message.includes('Token has expired') || error.message.includes('Signature has expired') || error.message.includes('Invalid token')) {
+            setTimeout(() => Auth.logout(), 2000); // Logout after 2 seconds so user can read the error
         }
         throw error;
     }

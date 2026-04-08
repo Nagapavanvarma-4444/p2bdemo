@@ -126,14 +126,22 @@
                 <div class="dashboard-header"><div><h1>Edit Profile</h1><p class="subtitle">Keep your profile updated to attract more clients</p></div></div>
                 <form class="dashboard-card" onsubmit="updateProfile(event)" style="padding:var(--space-2xl)">
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-lg)">
-                        <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="prof-name" value="${user.name || ''}"></div>
+                        <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-input" id="prof-name" value="${user.name || ''}" required></div>
                         <div class="form-group"><label class="form-label">Phone</label><input type="tel" class="form-input" id="prof-phone" value="${user.phone || ''}"></div>
                         <div class="form-group"><label class="form-label">Location</label><input type="text" class="form-input" id="prof-location" value="${user.location || ''}"></div>
                         <div class="form-group"><label class="form-label">Experience (years)</label><input type="number" class="form-input" id="prof-experience" value="${user.experience_years || 0}"></div>
                     </div>
                     <div class="form-group"><label class="form-label">Professional Bio</label><textarea class="form-textarea" id="prof-bio" rows="4">${user.bio || ''}</textarea></div>
                     <div class="form-group"><label class="form-label">Skills (comma-separated)</label><input type="text" class="form-input" id="prof-skills" value="${(user.skills || []).join(', ')}"></div>
-                    <div class="form-group" style="margin-top:var(--space-lg)"><label class="form-label">Upload Avatar</label><input type="file" class="form-input" id="prof-avatar" accept="image/*"></div>
+                    <div class="form-group" style="margin-top:var(--space-lg)">
+                        <label class="form-label">Profile Picture</label>
+                        <div style="display:flex;align-items:center;gap:var(--space-lg);margin-top:var(--space-sm)">
+                            <div class="avatar avatar-xl" id="avatar-preview">
+                                ${user.avatar ? `<img src="${user.avatar}">` : user.name.charAt(0)}
+                            </div>
+                            <input type="file" class="form-input" id="prof-avatar" accept="image/*" style="flex:1">
+                        </div>
+                    </div>
                     <div style="display:flex;gap:var(--space-md);margin-top:var(--space-xl)">
                         <button type="submit" class="btn btn-primary btn-lg">Save Changes</button>
                     </div>
@@ -143,6 +151,11 @@
 
         async function updateProfile(e) {
             e.preventDefault();
+            const btn = e.target.querySelector('button[type="submit"]');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Saving...';
+
             try {
                 const body = {
                     name: document.getElementById('prof-name').value,
@@ -152,19 +165,36 @@
                     bio: document.getElementById('prof-bio').value,
                     skills: document.getElementById('prof-skills').value.split(',').map(s => s.trim()).filter(Boolean)
                 };
-                const data = await apiCall('/engineers/profile', { method: 'PUT', body });
-                if (data.user) Auth.setAuth(Auth.getToken(), { ...Auth.getUser(), ...data.user });
-                showToast('Profile updated!', 'success');
-
+                
+                const profileResponse = await apiCall('/auth/profile', { method: 'PUT', body });
+                let updatedUser = profileResponse.user;
+                
                 // Upload avatar if selected
                 const avatarFile = document.getElementById('prof-avatar').files[0];
                 if (avatarFile) {
                     const fd = new FormData();
                     fd.append('avatar', avatarFile);
-                    await apiCall('/engineers/avatar', { method: 'POST', body: fd });
-                    showToast('Avatar updated!', 'success');
+                    const avatarResponse = await apiCall('/auth/avatar', { method: 'POST', body: fd });
+                    if (avatarResponse.url) updatedUser.avatar = avatarResponse.url;
                 }
-            } catch (err) { showToast(err.message, 'error'); }
+
+                if (updatedUser) Auth.setAuth(Auth.getToken(), updatedUser);
+                showToast('Profile updated successfully!', 'success');
+                
+                // Refresh sidebar
+                document.getElementById('sidebar-user').innerHTML = `
+                    <div class="avatar">${updatedUser.avatar ? `<img src="${updatedUser.avatar}">` : updatedUser.name.charAt(0)}</div>
+                    <div class="sidebar-user-info"><h4>${updatedUser.name}</h4><p>${updatedUser.category || 'Engineer'}</p></div>
+                `;
+                
+                loadProfile();
+            } catch (err) { 
+                console.error('Profile update error:', err);
+                showToast(err.message || 'Failed to update profile', 'error'); 
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
         }
 
         async function loadAvailableProjects() {

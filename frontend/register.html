@@ -95,8 +95,14 @@
                                 <input type="password" class="form-input" id="reg-confirm-password"
                                     placeholder="Confirm your password" required>
                             </div>
-                            <button type="submit" class="btn btn-primary btn-block btn-lg" id="register-btn">Create
-                                Account</button>
+
+                             <div id="engineer-docs" style="display:none; margin-bottom:var(--space-lg); border:1px dashed var(--border-color); padding:var(--space-md); border-radius:var(--radius-md)">
+                                <label class="form-label" style="display:block;margin-bottom:var(--space-sm)">Engineer Certificates / Documents</label>
+                                <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:var(--space-md)">Upload up to 3 files (Certificates, License, IDs). Max 5MB per file.</p>
+                                <input type="file" class="form-input" id="reg-certs" multiple accept=".pdf,.jpg,.jpeg,.png">
+                            </div>
+                            
+                            <button type="submit" class="btn btn-primary btn-block btn-lg" id="register-btn">Create Account</button>
                         </form>
                         <div class="auth-footer">
                             Already have an account? <a href="/login.html">Sign in</a>
@@ -118,8 +124,17 @@
             document.getElementById('reg-role').value = role;
             document.querySelectorAll('.role-option').forEach(o => o.classList.remove('active'));
             el.classList.add('active');
+            
             const catWrapper = document.getElementById('category-wrapper');
-            catWrapper.classList.toggle('visible', role === 'engineer');
+            const docsWrapper = document.getElementById('engineer-docs');
+            
+            if (role === 'engineer') {
+                catWrapper.style.display = 'block';
+                docsWrapper.style.display = 'block';
+            } else {
+                catWrapper.style.display = 'none';
+                docsWrapper.style.display = 'none';
+            }
         }
 
         function togglePassword(inputId, btn) {
@@ -139,25 +154,33 @@
             const btn = document.getElementById('register-btn');
             btn.disabled = true;
             btn.textContent = 'Creating account...';
+            
             try {
-                const body = {
-                    name: document.getElementById('reg-name').value,
-                    email: document.getElementById('reg-email').value,
-                    password: password,
-                    role: selectedRole,
-                    phone: document.getElementById('reg-phone').value,
-                    location: document.getElementById('reg-location').value
-                };
+                const fd = new FormData();
+                fd.append('name', document.getElementById('reg-name').value);
+                fd.append('email', document.getElementById('reg-email').value);
+                fd.append('password', password);
+                fd.append('role', selectedRole);
+                fd.append('phone', document.getElementById('reg-phone').value);
+                fd.append('location', document.getElementById('reg-location').value);
+                
                 if (selectedRole === 'engineer') {
-                    body.category = document.getElementById('reg-category').value;
-                    if (!body.category) {
+                    const category = document.getElementById('reg-category').value;
+                    if (!category) {
                         showToast('Please select a category', 'error');
                         btn.disabled = false;
                         btn.textContent = 'Create Account';
                         return;
                     }
+                    fd.append('category', category);
+                    
+                    const certs = document.getElementById('reg-certs').files;
+                    for (let i = 0; i < certs.length; i++) {
+                        fd.append('certificates', certs[i]);
+                    }
                 }
-                const data = await apiCall('/auth/register', { method: 'POST', body });
+                
+                const data = await apiCall('/auth/register', { method: 'POST', body: fd });
                 
                 // Auto-login after registration
                 Auth.setAuth(data.token, data.user);

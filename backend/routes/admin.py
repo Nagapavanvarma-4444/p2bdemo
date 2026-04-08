@@ -159,6 +159,56 @@ def approve_engineer(current_user_id, engineer_id):
     return jsonify({'message': f'Engineer {status} successfully'}), 200
 
 
+@admin_bp.route('/engineers/<engineer_id>', methods=['GET'])
+@token_required
+@role_required('admin')
+def get_engineer_details(current_user_id, engineer_id):
+    """Get full details of an engineer for review."""
+    from app import mongo
+    
+    try:
+        engineer = mongo.db.users.find_one({'_id': ObjectId(engineer_id), 'role': 'engineer'})
+    except:
+        return jsonify({'error': 'Invalid engineer ID'}), 400
+    
+    if not engineer:
+        return jsonify({'error': 'Engineer not found'}), 404
+    
+    return jsonify({'engineer': serialize_doc(engineer)}), 200
+
+
+@admin_bp.route('/engineers/<engineer_id>/verify-badge', methods=['PUT'])
+@token_required
+@role_required('admin')
+def toggle_verification_badge(current_user_id, engineer_id):
+    """Toggle the verification badge (is_verified) for an engineer."""
+    from app import mongo
+    
+    data = request.get_json()
+    verified = data.get('verified', True)
+    
+    try:
+        mongo.db.users.update_one(
+            {'_id': ObjectId(engineer_id)},
+            {'$set': {'is_verified': verified, 'updated_at': datetime.utcnow()}}
+        )
+        
+        # Notify engineer
+        if verified:
+            notification = create_notification_document(
+                ObjectId(engineer_id),
+                'badge_awarded',
+                'Congratulations! You have been awarded the Verified Badge.',
+                '/engineer-dashboard'
+            )
+            mongo.db.notifications.insert_one(notification)
+            
+    except:
+        return jsonify({'error': 'Update failed'}), 400
+    
+    return jsonify({'message': f'Engineer {"verified" if verified else "unverified"}'}), 200
+
+
 @admin_bp.route('/engineers/<engineer_id>/verify-cert', methods=['PUT'])
 @token_required
 @role_required('admin')
@@ -244,3 +294,31 @@ def get_categories(current_user_id):
     return jsonify({
         'categories': [{'name': c['_id'], 'count': c['count']} for c in categories if c['_id']]
     }), 200
+
+
+@admin_bp.route('/settings', methods=['GET'])
+@token_required
+@role_required('admin')
+def get_settings(current_user_id):
+    """Get system settings (maintenance mode, etc)."""
+    from app import mongo
+    settings = list(mongo.db.system_settings.find({}))
+    return jsonify({'settings': {s['key']: s['value'] for s in settings}}), 200
+
+
+@admin_bp.route('/settings', methods=['PUT'])
+@token_required
+@role_required('admin')
+def update_settings(current_user_id):
+    """Update system settings."""
+    from app import mongo
+    data = request.get_json()
+    
+    if 'maintenance_mode' in data:
+        mongo.db.system_settings.update_one(
+            {'key': 'maintenance_mode'},
+            {'$set': {'value': data['maintenance_mode'], 'updated_at': datetime.utcnow()}},
+            upsert=True
+        )
+    
+    return jsonify({'message': 'Settings updated successfully'}), 200

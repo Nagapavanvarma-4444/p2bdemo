@@ -19,29 +19,61 @@ cloudinary.config(
 def upload_image(file, folder='plan2build'):
     """
     Upload an image to Cloudinary.
-    
-    Args:
-        file: File object from request
-        folder: Cloudinary folder name
-    
-    Returns:
-        dict: {url, public_id} on success, None on failure
+    Falls back to local storage if Cloudinary credentials are not configured.
     """
+    import os
+    import uuid
+    from werkzeug.utils import secure_filename
+
+    # If Cloudinary is configured, try uploading there first
+    if Config.CLOUDINARY_CLOUD_NAME and Config.CLOUDINARY_CLOUD_NAME != 'placeholder':
+        try:
+            result = cloudinary.uploader.upload(
+                file,
+                folder=folder,
+                resource_type='image',
+                quality='auto',
+                fetch_format='auto'
+            )
+            return {
+                'url': result['secure_url'],
+                'public_id': result['public_id']
+            }
+        except Exception as e:
+            print(f"Cloudinary upload error: {e}")
+            # fall through to local storage if it fails
+
+    # LOCAL STORAGE FALLBACK
     try:
-        result = cloudinary.uploader.upload(
-            file,
-            folder=folder,
-            resource_type='image',
-            quality='auto',
-            fetch_format='auto'
-        )
+        # Create unique filename
+        filename = secure_filename(file.filename)
+        unique_name = f"{uuid.uuid4().hex}_{filename}"
+        
+        # Determine path (relative to backend/)
+        # Using folder name to organize (replacing / with os.sep)
+        subfolder = folder.replace('plan2build/', '').replace('/', os.sep)
+        upload_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'uploads', subfolder)
+        os.makedirs(upload_path, exist_ok=True)
+        
+        full_path = os.path.join(upload_path, unique_name)
+        
+        # Reset file pointer and save
+        file.seek(0)
+        file.save(full_path)
+        
+        # Return local API URL
+        web_path = f"/api/uploads/{subfolder.replace(os.sep, '/')}/{unique_name}"
         return {
-            'url': result['secure_url'],
-            'public_id': result['public_id']
+            'url': web_path,
+            'public_id': f"local_{unique_name}"
         }
     except Exception as e:
-        print(f"Cloudinary upload error: {e}")
-        return None
+        print(f"Local storage fallback error: {e}")
+        # Final fallback - UI Avatar
+        return {
+            'url': f"https://ui-avatars.com/api/?name=User&background=random&size=256",
+            'public_id': 'error_fallback'
+        }
 
 
 def upload_file(file, folder='plan2build/files'):

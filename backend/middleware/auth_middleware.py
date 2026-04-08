@@ -17,11 +17,23 @@ def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         try:
+            # For multipart/form-data (file uploads), consuming form/files BEFORE 
+            # verify_jwt_in_request can prevent buffering issues on some servers.
+            if request.mimetype == 'multipart/form-data':
+                # Accessing these to trigger parsing
+                _ = request.form
+                _ = request.files
+                
             verify_jwt_in_request()
             current_user_id = get_jwt_identity()
-            return f(current_user_id=current_user_id, *args, **kwargs)
         except Exception as e:
-            return jsonify({'error': 'Invalid or expired token', 'message': str(e)}), 401
+            # Put the full error in the 'error' field so it shows up in UI toasts
+            return jsonify({
+                'error': f"Authentication failed: {str(e)}",
+                'message': str(e)
+            }), 401
+            
+        return f(current_user_id=current_user_id, *args, **kwargs)
     return decorated
 
 
@@ -29,12 +41,6 @@ def role_required(*roles):
     """
     Decorator to require specific roles for the route.
     Must be used AFTER @token_required.
-    
-    Usage:
-        @token_required
-        @role_required('admin', 'engineer')
-        def my_route(current_user_id):
-            ...
     """
     def decorator(f):
         @wraps(f)
@@ -47,6 +53,11 @@ def role_required(*roles):
                         'error': 'Access denied',
                         'message': f'This action requires one of these roles: {", ".join(roles)}'
                     }), 403
+                
+                # Double-check for admin specifically
+                if 'admin' in roles and user_role != 'admin':
+                    return jsonify({'error': 'Unauthorized', 'message': 'Admin access only.'}), 403
+
                 return f(*args, **kwargs)
             except Exception as e:
                 return jsonify({'error': 'Authorization error', 'message': str(e)}), 403

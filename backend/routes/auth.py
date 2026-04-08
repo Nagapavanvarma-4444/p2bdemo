@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 
 from models.user import create_user_document, ENGINEER_CATEGORIES
 from utils.helpers import validate_email, validate_password, serialize_doc, generate_token, generate_otp
+from middleware.auth_middleware import token_required
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -19,8 +20,15 @@ auth_bp = Blueprint('auth', __name__)
 def register():
     """Register a new user (customer or engineer)."""
     from app import mongo
+    from utils.cloudinary_upload import upload_image, validate_file_extension
     
-    data = request.get_json()
+    # Check if request is multipart (FormData) or JSON
+    if request.mimetype == 'multipart/form-data':
+        data = request.form.to_dict()
+        files = request.files.getlist('certificates')
+    else:
+        data = request.get_json()
+        files = []
     
     # Validate required fields
     required = ['name', 'email', 'password', 'role']
@@ -41,12 +49,12 @@ def register():
     if data['role'] not in ['customer', 'engineer']:
         return jsonify({'error': 'Role must be customer or engineer'}), 400
     
-    # Validate engineer category if registering as engineer
-    if data['role'] == 'engineer' and not data.get('category'):
-        return jsonify({'error': 'Category is required for engineers'}), 400
-    
-    if data['role'] == 'engineer' and data.get('category') not in ENGINEER_CATEGORIES:
-        return jsonify({'error': f'Invalid category. Must be one of: {", ".join(ENGINEER_CATEGORIES)}'}), 400
+    # Validate engineer category
+    if data['role'] == 'engineer':
+        if not data.get('category'):
+            return jsonify({'error': 'Category is required for engineers'}), 400
+        if data.get('category') not in ENGINEER_CATEGORIES:
+            return jsonify({'error': f'Invalid category. Must be one of: {", ".join(ENGINEER_CATEGORIES)}'}), 400
     
     # Check if email already exists
     existing_user = mongo.db.users.find_one({'email': data['email'].lower().strip()})
@@ -57,9 +65,30 @@ def register():
     password_hash = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
     data['password_hash'] = password_hash
     
+    # Handle certificate uploads for engineers
+    certifications = []
+    if data['role'] == 'engineer' and files:
+        for file in files[:3]: # Max 3 certs
+            if validate_file_extension(file.filename, {'pdf', 'jpg', 'jpeg', 'png'}):
+                result = upload_image(file, folder='plan2build/certificates')
+                if result:
+                    certifications.append({
+                        'name': file.filename,
+                        'url': result['url'],
+                        'verified': False,
+                        'uploaded_at': datetime.utcnow()
+                    })
+
     # Create user document
     user_doc = create_user_document(data, role=data['role'])
-    user_doc['is_verified'] = True  # Automatically verify for direct login
+    user_doc['is_verified'] = False # Engineers start unverified (awaiting admin verification badge)
+    user_doc['is_approved'] = False # Engineers start unapproved (awaiting admin approval)
+    
+    if data['role'] == 'customer':
+        user_doc['is_verified'] = True
+        user_doc['is_approved'] = True
+    else:
+        user_doc['certifications'] = certifications
     
     # Insert into database
     result = mongo.db.users.insert_one(user_doc)
@@ -75,11 +104,6 @@ def register():
     user_doc['_id'] = result.inserted_id
     user_data = serialize_doc(user_doc)
     user_data.pop('password_hash', None)
-    user_data.pop('otp', None)
-    user_data.pop('otp_expiry', None)
-    user_data.pop('clerk_sign_up_id', None)
-    user_data.pop('verification_token', None)
-    user_data.pop('reset_token', None)
     
     return jsonify({
         'message': 'Registration successful!',
@@ -105,6 +129,17 @@ def login():
     if not user:
         return jsonify({'error': 'Invalid email or password'}), 401
     
+    # MAINTENANCE MODE CHECK: Prevent non-admins from logging in
+    try:
+        settings = mongo.db.system_settings.find_one({'key': 'maintenance_mode'})
+        if settings and settings.get('value') is True and user.get('role') != 'admin':
+            return jsonify({
+                'error': 'Under Construction',
+                'message': 'PLAN 2 BUILD is currently undergoing scheduled maintenance to bring you new features and a better experience. We\'ll be back online shortly. Only administrators can access the system at this time.'
+            }), 503
+    except:
+        pass # Allow login if settings check fails
+
     # Verify password
     if not bcrypt.checkpw(data['password'].encode('utf-8'), user['password_hash'].encode('utf-8')):
         return jsonify({'error': 'Invalid email or password'}), 401
@@ -258,3 +293,83 @@ def get_current_user():
     user_data.pop('reset_token', None)
     
     return jsonify({'user': user_data}), 200
+
+
+@auth_bp.route('/profile', methods=['PUT'])
+@token_required
+def update_profile(current_user_id):
+    """Update user profile information."""
+    from app import mongo
+    
+    data = request.get_json()
+    user = mongo.db.users.find_one({'_id': ObjectId(current_user_id)})
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+        
+    # Fields that everyone can update
+    allowed_fields = ['name', 'phone', 'location']
+    
+    # Fields that only engineers can update
+    if user.get('role') == 'engineer':
+        allowed_fields.extend(['bio', 'experience_years', 'skills', 'pricing', 'category'])
+    
+    update_data = {}
+    for field in allowed_fields:
+        if field in data:
+            update_data[field] = data[field]
+    
+    if not update_data:
+        return jsonify({'error': 'No valid fields to update'}), 400
+    
+    update_data['updated_at'] = datetime.utcnow()
+    
+    # Update in database
+    mongo.db.users.update_one(
+        {'_id': ObjectId(current_user_id)},
+        {'$set': update_data}
+    )
+    
+    # Recalculate profile completion if engineer
+    if user.get('role') == 'engineer':
+        from models.user import calculate_profile_completion
+        updated_user = mongo.db.users.find_one({'_id': ObjectId(current_user_id)})
+        completion = calculate_profile_completion(updated_user)
+        mongo.db.users.update_one(
+            {'_id': ObjectId(current_user_id)},
+            {'$set': {'profile_completion': completion}}
+        )
+    
+    updated_user = mongo.db.users.find_one({'_id': ObjectId(current_user_id)})
+    user_data = serialize_doc(updated_user)
+    user_data.pop('password_hash', None)
+    
+    return jsonify({
+        'message': 'Profile updated successfully',
+        'user': user_data
+    }), 200
+
+
+@auth_bp.route('/avatar', methods=['POST'])
+@token_required
+def upload_avatar(current_user_id):
+    """Upload profile avatar image."""
+    from app import mongo
+    from utils.cloudinary_upload import upload_image, validate_file_extension
+    
+    if 'avatar' not in request.files:
+        return jsonify({'error': 'No file uploaded'}), 400
+    
+    file = request.files['avatar']
+    if not validate_file_extension(file.filename, {'jpg', 'jpeg', 'png', 'webp'}):
+        return jsonify({'error': 'Invalid file type. Use JPG, PNG, or WebP'}), 400
+    
+    result = upload_image(file, folder='plan2build/avatars')
+    if not result:
+        return jsonify({'error': 'Upload failed'}), 500
+    
+    mongo.db.users.update_one(
+        {'_id': ObjectId(current_user_id)},
+        {'$set': {'avatar': result['url'], 'updated_at': datetime.utcnow()}}
+    )
+    
+    return jsonify({'message': 'Avatar uploaded', 'url': result['url']}), 200

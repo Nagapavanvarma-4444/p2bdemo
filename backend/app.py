@@ -11,7 +11,7 @@ Serves both API routes and frontend static files.
 import os
 import sys
 from datetime import datetime
-from flask import Flask, send_from_directory, jsonify, request
+from flask import Flask, send_from_directory, jsonify, request, url_for
 from flask_pymongo import PyMongo
 from flask_jwt_extended import JWTManager
 from flask_socketio import SocketIO, emit, join_room, leave_room
@@ -34,10 +34,17 @@ app = Flask(__name__, static_folder='../frontend', static_url_path='')
 app.config.from_object(Config)
 
 # Extensions
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+CORS(app, resources={r"/api/*": {
+    "origins": "*",
+    "allow_headers": ["Authorization", "Content-Type"],
+    "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+}})
 mongo = PyMongo(app)
 jwt = JWTManager(app)
 mail = Mail(app)
+
+# JWT locations to support token in FormData if header is blocked
+app.config["JWT_TOKEN_LOCATION"] = ["headers", "query_string", "json"]
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 
 # Razorpay client (initialized with keys, may fail if keys not set)
@@ -97,9 +104,6 @@ def serve_frontend(path):
     return send_from_directory(app.static_folder, 'index.html')
 
 
-# ===========================
-# API Health Check
-# ===========================
 @app.route('/api/health')
 def health_check():
     """API health check endpoint."""
@@ -109,6 +113,42 @@ def health_check():
         'version': '1.0.0',
         'timestamp': datetime.utcnow().isoformat()
     }), 200
+
+
+@app.before_request
+def check_maintenance_mode():
+    """Check if maintenance mode is enabled and block access if necessary."""
+    # Exclude admin routes, auth routes, and static assets
+    if request.path.startswith('/api/admin') or \
+       request.path.startswith('/api/auth') or \
+       request.path.startswith('/js/') or \
+       request.path.startswith('/css/') or \
+       request.path.startswith('/img/') or \
+       request.path == '/login.html' or \
+       request.path == '/admin.html' or \
+       request.path == '/admin' or \
+       request.path == '/maintenance.html':
+        return None
+
+    try:
+        settings = mongo.db.system_settings.find_one({'key': 'maintenance_mode'})
+        if settings and settings.get('value') is True:
+            # If it's an API call, return JSON
+            if request.path.startswith('/api/'):
+                return jsonify({'error': 'Maintenance', 'message': 'Site is currently undergoing maintenance. Please try again later.'}), 503
+            # If it's a page request, redirect to maintenance page
+            if request.path.endswith('.html') or request.path == '/':
+                return send_from_directory(app.static_folder, 'maintenance.html')
+    except:
+        pass # Database might be down, allow request but it will fail later
+    return None
+
+
+@app.route('/api/uploads/<path:filename>')
+def serve_uploads(filename):
+    """Serve uploaded files from the local uploads directory."""
+    uploads_dir = os.path.join(os.path.dirname(__file__), 'uploads')
+    return send_from_directory(uploads_dir, filename)
 
 
 # ===========================
@@ -340,6 +380,18 @@ def seed_admin():
 if __name__ == '__main__':
     port = int(os.getenv('FLASK_PORT', 5000))
     debug = os.getenv('FLASK_DEBUG', 'False').lower() == 'true'
+
+    # Ensure local upload directories exist
+    uploads_dir = os.path.join(os.path.dirname(__file__), 'uploads', 'avatars')
+    os.makedirs(uploads_dir, exist_ok=True)
+
+    # Ensure maintenance mode setting exists
+    with app.app_context():
+        try:
+            if not mongo.db.system_settings.find_one({'key': 'maintenance_mode'}):
+                mongo.db.system_settings.insert_one({'key': 'maintenance_mode', 'value': False, 'updated_at': datetime.utcnow()})
+        except:
+            pass
 
     # Try DB init but don't block server startup
     with app.app_context():
