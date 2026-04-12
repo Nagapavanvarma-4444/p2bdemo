@@ -8,6 +8,9 @@ Entry point for the Flask backend with Socket.IO real-time messaging.
 Serves both API routes and frontend static files.
 """
 
+import eventlet
+eventlet.monkey_patch()
+
 import os
 import sys
 from datetime import datetime
