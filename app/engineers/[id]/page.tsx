@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { apiCall } from "@/lib/api";
+import { p2b_api_call } from "@/lib/api";
 import Link from "next/link";
 
 export default function EngineerProfile() {

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { apiCall } from '@/lib/api';
+import { p2b_api_call } from '@/lib/api';
 
 export default function Register() {
   const [role, setRole] = useState('customer');

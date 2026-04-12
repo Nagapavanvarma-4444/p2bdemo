@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { apiCall } from "@/lib/api";
+import { p2b_api_call } from "@/lib/api";
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<any>(null);
@@ -23,8 +23,8 @@ export default function AdminDashboard() {
   async function fetchData() {
     setLoading(true);
     try {
-      const statsRes = await apiCall('/api/admin/stats');
-      const usersRes = await apiCall('/api/admin/users');
+      const statsRes = await p2b_api_call('/api/admin/stats');
+      const usersRes = await p2b_api_call('/api/admin/users');
       setStats(statsRes);
       setUsers(usersRes.users || []);
     } catch (err) {
@@ -40,7 +40,7 @@ export default function AdminDashboard() {
       reason = prompt("Enter rejection reason:") || "Verification failed";
     }
     try {
-      await apiCall('/api/admin/users', {
+      await p2b_api_call('/api/admin/users', {
         method: 'PUT',
         body: { engineer_id: id, approved, reason }
       });
@@ -52,7 +52,7 @@ export default function AdminDashboard() {
 
   async function toggleMaintenance(current: boolean) {
     try {
-      await apiCall('/api/admin/stats', {
+      await p2b_api_call('/api/admin/stats', {
         method: 'PUT',
         body: { maintenance_mode: !current }
       });

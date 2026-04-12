@@ -1,20 +1,23 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase-server';
 import { requireAuth } from '@/lib/auth';
 
 /**
- * 🏗️ Project Operations API (Supabase Version)
+ * 🏗️ Project Operations API (v2.0 - Next.js 16 Secure)
  * View details, Update status, Delete project
  */
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> } // Params is a Promise
 ) {
   try {
+    const { id: projectId } = await params; // 👈 UNWRAP
+    const supabase = await createClient();
+
     const { data: project, error: fetchError } = await supabase
       .from('projects')
       .select('*, customer:profiles!customer_id(*)')
-      .eq('id', params.id)
+      .eq('id', projectId)
       .single();
 
     if (fetchError) return NextResponse.json({ error: 'Project not found' }, { status: 404 });
@@ -27,16 +30,19 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> } // Params is a Promise
 ) {
   try {
-    const { user, error } = await requireAuth(request);
-    if (error) return error;
+    const { user, error: authError } = await requireAuth(request);
+    if (authError) return authError;
 
+    const { id: projectId } = await params; // 👈 UNWRAP
     const { status } = await request.json();
 
+    const supabase = await createClient();
+
     // Verify ownership
-    const { data: project } = await supabase.from('projects').select('customer_id').eq('id', params.id).single();
+    const { data: project } = await supabase.from('projects').select('customer_id').eq('id', projectId).single();
     if (!project || project.customer_id !== user.id) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }
@@ -44,7 +50,7 @@ export async function PATCH(
     const { data: updated, error: updateError } = await supabase
       .from('projects')
       .update({ status })
-      .eq('id', params.id)
+      .eq('id', projectId)
       .select()
       .single();
 

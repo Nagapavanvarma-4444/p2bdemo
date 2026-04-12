@@ -1,26 +1,27 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase-server';
 
 /**
- * 👤 User Profile API (Supabase Version)
+ * 👤 User Profile API (v2.0 - Next.js 16 Secure)
  * Fetches public profile details for an engineer or customer
  */
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> } // Params is a Promise
 ) {
   try {
-    const { id } = params;
+    const { id: userId } = await params; // 👈 UNWRAP
+    const supabase = await createClient();
 
-    const { data: user, error: fetchError } = await supabase
+    const { data: profile, error: fetchError } = await supabase
       .from('profiles')
       .select('*')
-      .eq('id', id)
+      .eq('id', userId)
       .single();
 
     if (fetchError) return NextResponse.json({ error: 'User not found' }, { status: 404 });
 
-    return NextResponse.json({ user });
+    return NextResponse.json({ user: profile });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
