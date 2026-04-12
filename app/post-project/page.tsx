@@ -2,39 +2,48 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { p2b_api_call } from "@/lib/api";
+import { p2b_api_call } from "@/lib/api"; // 🚀 UPDATED
 
 export default function PostProject() {
   const [formData, setFormData] = useState({
     title: "",
-    category: "Architecture",
-    location: "",
-    budget_min: "",
-    budget_max: "",
-    timeline: "",
-    description: ""
+    description: "",
+    category: "Civil Engineer",
+    budget: "",
+    location: "Mumbai",
   });
   const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const router = useRouter();
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem("p2b_user") || "{}");
-    if (user.role !== 'customer') router.push("/auth/login");
+    const stored = localStorage.getItem('p2b_user');
+    if (!stored) {
+      router.push('/auth/login');
+      return;
+    }
+    setUser(JSON.parse(stored));
   }, [router]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setFormData({ ...formData, [e.target.id]: e.target.value });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+
     try {
-      await apiCall('/api/projects', {
+      // 🚀 UPDATED CALL
+      await p2b_api_call('/api/projects', {
         method: 'POST',
         body: {
           ...formData,
-          budget_min: parseInt(formData.budget_min),
-          budget_max: parseInt(formData.budget_max)
+          budget: parseFloat(formData.budget) || 0
         }
       });
-      router.push("/dashboard/customer");
+      alert("Project posted successfully!");
+      router.push('/dashboard/customer');
     } catch (err: any) {
       alert(err.message);
     } finally {
@@ -43,75 +52,52 @@ export default function PostProject() {
   };
 
   return (
-    <div className="auth-page" style={{ background: 'var(--navy-dark)', minHeight: '100vh', padding: 'var(--space-4xl) 0' }}>
-      <div className="auth-container" style={{ maxWidth: '800px' }}>
-        <div className="auth-card">
-          <div className="auth-header">
-            <h1>Post a New Project</h1>
-            <p className="subtitle">Tell experts what you need and get professional proposals.</p>
-          </div>
-          <form className="auth-form" onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label className="form-label">Project Title</label>
-              <input 
-                type="text" className="form-input" placeholder="e.g. Modern Residential Villa Design" required 
-                value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})}
-              />
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-lg)' }}>
+    <div className="form-page">
+      <div className="dashboard-container" style={{ maxWidth: '800px' }}>
+        <div className="dashboard-header" style={{ textAlign: 'center', marginBottom: '40px' }}>
+          <h1 style={{ fontSize: '2.5rem' }}>Post Your Project</h1>
+          <p style={{ opacity: 0.6 }}>Tell us what you need, and expert engineers will reach out to you.</p>
+        </div>
+
+        <div className="dashboard-card glass">
+          <div className="card-body" style={{ padding: '40px' }}>
+            <form onSubmit={handleSubmit}>
               <div className="form-group">
-                <label className="form-label">Category</label>
-                <select className="form-input" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
-                  <option>Architecture</option>
-                  <option>Civil Engineering</option>
-                  <option>Interior Design</option>
-                  <option>Structural Analysis</option>
-                  <option>Landscape Design</option>
-                  <option>Construction</option>
-                </select>
+                <label className="form-label">Project Title</label>
+                <input type="text" className="form-input" id="title" value={formData.title} onChange={handleChange} placeholder="e.g., Support Wall Construction" required />
               </div>
+
+              <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div className="form-group">
+                  <label className="form-label">Category</label>
+                  <select className="form-select" id="category" value={formData.category} onChange={handleChange}>
+                    <option value="Civil Engineer">Civil Engineer</option>
+                    <option value="Architect">Architect</option>
+                    <option value="Interior Designer">Interior Designer</option>
+                    <option value="Contractor">Contractor</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Estimated Budget (INR)</label>
+                  <input type="number" className="form-input" id="budget" value={formData.budget} onChange={handleChange} placeholder="e.g., 50000" required />
+                </div>
+              </div>
+
               <div className="form-group">
                 <label className="form-label">Location</label>
-                <input 
-                  type="text" className="form-input" placeholder="e.g. Hyderabad, Telangana" required 
-                  value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})}
-                />
+                <input type="text" className="form-input" id="location" value={formData.location} onChange={handleChange} placeholder="e.g., Mumbai, Maharashtra" required />
               </div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-lg)' }}>
+
               <div className="form-group">
-                <label className="form-label">Min Budget (₹)</label>
-                <input 
-                  type="number" className="form-input" placeholder="Min" 
-                  value={formData.budget_min} onChange={e => setFormData({...formData, budget_min: e.target.value})}
-                />
+                <label className="form-label">Detailed Description</label>
+                <textarea className="form-input" id="description" rows={6} value={formData.description} onChange={handleChange} placeholder="Describe the project scope, materials needed, and timeline..." required></textarea>
               </div>
-              <div className="form-group">
-                <label className="form-label">Max Budget (₹)</label>
-                <input 
-                  type="number" className="form-input" placeholder="Max" 
-                  value={formData.budget_max} onChange={e => setFormData({...formData, budget_max: e.target.value})}
-                />
-              </div>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Estimated Timeline</label>
-              <input 
-                type="text" className="form-input" placeholder="e.g. 2 months" 
-                value={formData.timeline} onChange={e => setFormData({...formData, timeline: e.target.value})}
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Detailed Description</label>
-              <textarea 
-                className="form-textarea" rows={6} placeholder="Provide details about your site, style preferences, and specific requirements..." required 
-                value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})}
-              ></textarea>
-            </div>
-            <button type="submit" className="btn btn-primary btn-block btn-lg" disabled={loading}>
-              {loading ? "Posting..." : "🚀 Post Project Now"}
-            </button>
-          </form>
+
+              <button type="submit" className="btn btn-gold btn-block btn-lg" disabled={loading}>
+                {loading ? 'Posting Project...' : '🚀 Post Project Now'}
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     </div>
