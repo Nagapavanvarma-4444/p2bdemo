@@ -24,7 +24,8 @@ export default function Login() {
     setError('');
 
     try {
-      const data = await apiCall('/api/auth/login', {
+      // 🚀 RESTORED GLOBAL KEY: p2b_api_call
+      const data = await p2b_api_call('/api/auth/login', {
         method: 'POST',
         body: {
           email: formData.email,

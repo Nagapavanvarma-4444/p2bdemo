@@ -52,7 +52,6 @@ export default function Register() {
         }
         fd.append('category', formData.category);
         
-        // Handling files (limited for now in migration)
         const fileInput = document.getElementById('reg-certs') as HTMLInputElement;
         if (fileInput && fileInput.files) {
           for (let i = 0; i < fileInput.files.length; i++) {
@@ -61,7 +60,8 @@ export default function Register() {
         }
       }
 
-      const data = await apiCall('/api/auth/register', { method: 'POST', body: fd });
+      // 🚀 RESTORED GLOBAL KEY: p2b_api_call
+      const data = await p2b_api_call('/api/auth/register', { method: 'POST', body: fd });
       
       localStorage.setItem('p2b_token', data.token);
       localStorage.setItem('p2b_user', JSON.stringify(data.user));
