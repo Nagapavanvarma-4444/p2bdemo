@@ -43,7 +43,11 @@ export default function EngineerDashboard() {
               )}
             </div>
             <div className="sidebar-user-info">
-              <h4>{user?.name || 'Engineer'}</h4>
+              <h4>
+                {user?.name || 'Engineer'}
+                {user?.is_verified && <span className="badge badge-gold" title="Verified Professional" style={{ marginLeft: '5px', fontSize: '0.6rem' }}>✔️ Verified</span>}
+                {user?.is_approved === false && user?.rejection_reason && <span className="badge badge-red" title="Not Verified" style={{ marginLeft: '5px', fontSize: '0.6rem' }}>❌ Rejected</span>}
+              </h4>
               <p>{user?.category || 'Professional'}</p>
             </div>
           </div>
@@ -81,15 +85,18 @@ export default function EngineerDashboard() {
 
 function OverviewTab({ user }: any) {
   const [proposals, setProposals] = useState([]);
+  const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    p2b_api_call('/proposals')
-      .then(res => {
-        setProposals(res.proposals || []);
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
+    Promise.all([
+      p2b_api_call('/proposals'),
+      p2b_api_call('/api/notifications').catch(() => ({ notifications: [] }))
+    ]).then(([propRes, notifRes]) => {
+      setProposals(propRes.proposals || []);
+      setNotifications(notifRes.notifications || []);
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="spinner"></div>;
@@ -103,7 +110,25 @@ function OverviewTab({ user }: any) {
         <div><h1>Engineer Dashboard</h1><p className="subtitle">Manage your portfolio and active proposals</p></div>
       </div>
 
-      {!user.is_verified && (
+      {user.is_verified ? (
+        <div className="dashboard-card" style={{ marginBottom: 'var(--space-xl)', borderLeft: '4px solid var(--green)', background: 'rgba(34,197,94,0.05)' }}>
+          <div className="card-body" style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+            <div style={{ fontSize: '2rem' }}>🏆</div>
+            <div>
+                <h3 style={{ color: 'var(--green)', margin: 0 }}>Verified Professional</h3>
+                <p style={{ marginTop: '5px', fontSize: '0.9rem' }}>Account fully verified by the admin team. You have full access to all platform features.</p>
+            </div>
+          </div>
+        </div>
+      ) : user.is_approved === false && user.rejection_reason ? (
+        <div className="dashboard-card" style={{ marginBottom: 'var(--space-xl)', borderLeft: '4px solid #ef4444', background: 'rgba(239,68,68,0.05)' }}>
+          <div className="card-body">
+            <h3 style={{ color: '#ef4444', margin: 0 }}>Verification Rejected</h3>
+            <p style={{ marginTop: '5px', fontSize: '0.9rem', fontWeight: 'bold' }}>Reason: {user.rejection_reason}</p>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Please update your profile information and documents according to the reason above to resubmit for verification.</p>
+          </div>
+        </div>
+      ) : (
         <div className="dashboard-card" style={{ marginBottom: 'var(--space-xl)', borderLeft: '4px solid var(--gold)', background: 'rgba(212,175,55,0.05)' }}>
           <div className="card-body">
             <h3 style={{ color: 'var(--gold)', margin: 0 }}>Verification Pending</h3>
@@ -135,20 +160,38 @@ function OverviewTab({ user }: any) {
         </div>
       </div>
 
-      <div className="dashboard-card">
-        <div className="card-header"><h3>Recent Activity</h3></div>
-        <div className="card-body">
-          {proposals.length === 0 ? (
-            <div className="empty-state"><p>No proposals sent yet. Start browsing projects to find work!</p></div>
-          ) : proposals.slice(0, 5).map((p: any) => (
-            <div key={p.id} className="project-item">
-              <div className="project-info">
-                <h4>{p.project?.title || 'Project'}</h4>
-                <div className="project-meta"><span>💰 ₹{p.price}</span></div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 'var(--space-xl)' }}>
+        <div className="dashboard-card">
+          <div className="card-header"><h3>Recent Activity</h3></div>
+          <div className="card-body">
+            {proposals.length === 0 ? (
+              <div className="empty-state"><p>No proposals sent yet. Start browsing projects to find work!</p></div>
+            ) : proposals.slice(0, 5).map((p: any) => (
+              <div key={p.id} className="project-item">
+                <div className="project-info">
+                  <h4>{p.project?.title || 'Project'}</h4>
+                  <div className="project-meta"><span>💰 ₹{p.price}</span></div>
+                </div>
+                <span className={`badge badge-${p.status === 'accepted' ? 'green' : p.status === 'pending' ? 'blue' : 'red'}`}>{p.status}</span>
               </div>
-              <span className={`badge badge-${p.status === 'accepted' ? 'green' : p.status === 'pending' ? 'blue' : 'red'}`}>{p.status}</span>
-            </div>
-          ))}
+            ))}
+          </div>
+        </div>
+
+        <div className="dashboard-card">
+          <div className="card-header"><h3>Latest Notifications</h3></div>
+          <div className="card-body" style={{ maxHeight: '400px', overflowY: 'auto' }}>
+            {notifications.length === 0 ? (
+              <div className="empty-state"><p>No notifications yet.</p></div>
+            ) : notifications.map((n: any) => (
+              <div key={n.id} className="project-item" style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
+                <div className="project-info">
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-main)', margin: 0 }}>{n.message}</p>
+                  <small style={{ color: 'var(--text-muted)' }}>{new Date(n.created_at).toLocaleDateString()}</small>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </>

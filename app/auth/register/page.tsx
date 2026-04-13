@@ -15,6 +15,8 @@ export default function Register() {
     phone: '',
     location: '',
     category: '',
+    bio: '',
+    experience_years: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -51,6 +53,8 @@ export default function Register() {
           return;
         }
         fd.append('category', formData.category);
+        fd.append('bio', formData.bio);
+        fd.append('experience_years', formData.experience_years);
         
         const fileInput = document.getElementById('reg-certs') as HTMLInputElement;
         if (fileInput && fileInput.files) {
@@ -146,6 +150,14 @@ export default function Register() {
                       <option value="Exterior Designer">Exterior Designer</option>
                       <option value="Contractor">Contractor</option>
                     </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Years of Experience</label>
+                    <input type="number" className="form-input" id="experience_years" value={formData.experience_years} onChange={handleInputChange} placeholder="e.g. 5" />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Professional Bio</label>
+                    <textarea className="form-input" id="bio" value={formData.bio} onChange={(e: any) => setFormData({...formData, bio: e.target.value})} placeholder="Tell us about your expertise..." style={{ height: '100px', paddingTop: '10px' }}></textarea>
                   </div>
                   <div className="form-group">
                     <label className="form-label">Certificates / Documents</label>

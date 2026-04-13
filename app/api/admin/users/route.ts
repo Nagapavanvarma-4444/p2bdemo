@@ -21,6 +21,8 @@ export async function GET(request: Request) {
     const { data: users, error: fetchError } = await query;
     if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 400 });
 
+    console.log(`[AdminAPI] Fetched ${users?.length} users. First user certs:`, users?.[0]?.certifications);
+
     return NextResponse.json({ users });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });

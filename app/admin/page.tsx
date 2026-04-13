@@ -9,6 +9,9 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'stats' | 'approvals' | 'users' | 'settings'>('stats');
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [processing, setProcessing] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -60,6 +63,24 @@ export default function AdminDashboard() {
       fetchData();
     } catch (err: any) {
       alert("Error: " + err.message);
+    }
+  }
+
+  async function processApproval(id: string, approved: boolean, reason?: string) {
+    setProcessing(true);
+    try {
+      const res = await p2b_api_call('/api/admin/users', {
+        method: 'PUT',
+        body: { engineer_id: id, approved, reason }
+      });
+      alert(res.message || `Engineer ${approved ? 'approved' : 'rejected'}`);
+      setSelectedUser(null);
+      setRejectionReason("");
+      fetchData();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setProcessing(false);
     }
   }
 
@@ -156,13 +177,96 @@ export default function AdminDashboard() {
                         <p style={{ fontSize: '0.8rem' }}>{u.email} | {u.category}</p>
                       </div>
                       <div className="proposal-actions">
-                        <button className="btn btn-success btn-sm" onClick={() => handleApproval(u.id, true)}>Approve</button>
-                        <button className="btn btn-danger btn-sm" onClick={() => handleApproval(u.id, false)}>Reject</button>
+                        <button className="btn btn-primary btn-sm" onClick={() => {
+                          console.log('Selecting user for review:', u);
+                          setSelectedUser(u);
+                        }}>🛡️ Review & Badge</button>
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
+
+              {/* Enhanced Review Modal (React Component) */}
+              {selectedUser && (
+                <div className="modal-overlay" style={{ display: 'flex' }}>
+                    <div className="modal-content" style={{ maxWidth: '800px' }}>
+                    <div className="modal-header">
+                        <h2>Engineer Verification Review</h2>
+                        <button className="close-btn" onClick={() => setSelectedUser(null)}>&times;</button>
+                    </div>
+                    <div className="modal-body">
+                        <div className="review-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                            <div>
+                                <h3>Professional Info</h3>
+                                <p><strong>Name:</strong> {selectedUser.name}</p>
+                                <p><strong>Email:</strong> {selectedUser.email}</p>
+                                <p><strong>Category:</strong> {selectedUser.category}</p>
+                                <p><strong>Experience:</strong> {selectedUser.experience_years || 0} Years</p>
+                                <p><strong>Location:</strong> {selectedUser.location || 'Not provided'}</p>
+                            </div>
+                            <div>
+                                <h3>Bio</h3>
+                                <p style={{ fontSize: '0.9rem', color: '#666' }}>{selectedUser.bio || 'No bio provided.'}</p>
+                            </div>
+                        </div>
+                        <div style={{ marginTop: '20px' }}>
+                            <h3>Uploaded Documents</h3>
+                            <div style={{ padding: '15px', background: '#f8fafc', borderRadius: '8px' }}>
+                                {(() => {
+                                    let certs = selectedUser.certifications;
+                                    if (typeof certs === 'string') {
+                                        try { certs = JSON.parse(certs); } catch (e) { certs = []; }
+                                    }
+                                    return certs && Array.isArray(certs) && certs.length > 0 ? (
+                                        certs.map((c: string, i: number) => (
+                                            <a key={i} href={c} target="_blank" rel="noopener noreferrer" className="badge badge-blue" style={{ margin: '5px', display: 'inline-block' }}>
+                                                📄 Certificate {i+1}
+                                            </a>
+                                        ))
+                                    ) : (
+                                        <p>No certificates uploaded.</p>
+                                    );
+                                })()}
+                            </div>
+                        </div>
+                        <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1px solid #eee', display: 'flex', gap: '15px', alignItems: 'flex-end' }}>
+                            <div style={{ flex: '1' }}>
+                                <label style={{ display: 'block', fontSize: '0.8rem', marginBottom: '5px' }}>Rejection Reason (if applicable)</label>
+                                <input 
+                                    type="text" 
+                                    className="form-input" 
+                                    placeholder="e.g. Documents are unclear" 
+                                    value={rejectionReason}
+                                    onChange={(e) => setRejectionReason(e.target.value)}
+                                />
+                            </div>
+                            <button 
+                                className="btn btn-success" 
+                                disabled={processing}
+                                onClick={() => {
+                                    if(confirm('Approve this engineer? This will grant them the Verified badge.')) {
+                                        processApproval(selectedUser.id, true);
+                                    }
+                                }}
+                            >
+                                {processing ? 'Processing...' : 'Approve & Verify'}
+                            </button>
+                            <button 
+                                className="btn btn-danger" 
+                                disabled={processing}
+                                onClick={() => {
+                                    if(!rejectionReason) return alert('Please enter a rejection reason.');
+                                    processApproval(selectedUser.id, false, rejectionReason);
+                                }}
+                            >
+                                Reject
+                            </button>
+                        </div>
+                    </div>
+                    </div>
+                </div>
+              )}
             </>
           )}
 

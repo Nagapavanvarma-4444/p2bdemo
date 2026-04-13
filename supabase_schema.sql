@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
     bio TEXT,
     is_approved BOOLEAN DEFAULT FALSE,
     is_verified BOOLEAN DEFAULT FALSE,
+    rejection_reason TEXT,
+    certifications JSONB DEFAULT '[]'::jsonb, -- Array of document URLs
     average_rating DECIMAL DEFAULT 0,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()

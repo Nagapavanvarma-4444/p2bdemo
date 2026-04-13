@@ -263,7 +263,12 @@ function ProposalsTab() {
           ) : proposals.map((prop: any) => (
             <div key={prop.id} className="proposal-item">
               <div className="proposal-content">
-                <h4>{prop.engineer?.name} → {prop.projectTitle}</h4>
+                <h4>
+                    {prop.engineer?.name} 
+                    {prop.engineer?.is_verified && <span className="badge badge-gold" title="Verified Professional" style={{ marginLeft: '8px', fontSize: '0.6rem', verticalAlign: 'middle' }}>✔️ Verified</span>}
+                    {prop.engineer?.is_approved === false && <span className="badge badge-red" title="Unverified Professional" style={{ marginLeft: '8px', fontSize: '0.6rem', verticalAlign: 'middle' }}>❌ Unverified</span>}
+                    → {prop.projectTitle}
+                </h4>
                 <p>{prop.cover_letter?.substring(0, 150)}...</p>
                 <div className="project-meta">
                   <span>💰 ₹{prop.price}</span>
@@ -294,7 +299,39 @@ function ProposalsTab() {
 }
 
 function NotificationsTab() {
-  return <div className="empty-state"><h3>No recent notifications</h3></div>;
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    p2b_api_call('/api/notifications')
+      .then(res => {
+        setNotifications(res.notifications || []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="spinner"></div>;
+
+  return (
+    <>
+      <div className="dashboard-header"><div><h1>Recent Notifications</h1></div></div>
+      <div className="dashboard-card">
+        <div className="card-body">
+          {notifications.length === 0 ? (
+            <div className="empty-state"><h3>No recent notifications</h3></div>
+          ) : notifications.map((n: any) => (
+            <div key={n.id} className="project-item" style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '15px' }}>
+                <div className="project-info">
+                  <h4 style={{ fontSize: '1rem', color: 'var(--text-main)', margin: '0 0 5px 0' }}>{n.message}</h4>
+                  <small style={{ color: 'var(--text-muted)' }}>{new Date(n.created_at).toLocaleString()}</small>
+                </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
 }
 
 function ProfileTab({ user }: any) {
