@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { p2b_api_call } from "@/lib/api"; // 🚀 UPDATED
+import { p2b_api_call } from "@/lib/api";
+import Image from "next/image";
 
 export default function PostProject() {
   const [formData, setFormData] = useState({
@@ -34,7 +35,6 @@ export default function PostProject() {
     setLoading(true);
 
     try {
-      // 🚀 UPDATED CALL
       await p2b_api_call('/api/projects', {
         method: 'POST',
         body: {
@@ -52,52 +52,163 @@ export default function PostProject() {
   };
 
   return (
-    <div className="form-page">
-      <div className="dashboard-container" style={{ maxWidth: '800px' }}>
-        <div className="dashboard-header" style={{ textAlign: 'center', marginBottom: '40px' }}>
-          <h1 style={{ fontSize: '2.5rem' }}>Post Your Project</h1>
-          <p style={{ opacity: 0.6 }}>Tell us what you need, and expert engineers will reach out to you.</p>
+    <div className="dashboard-page animate-fadeIn">
+      <div className="container" style={{ paddingTop: '60px', paddingBottom: '100px' }}>
+        
+        <div className="text-center mb-5 animate-fadeInUp">
+            <div className="section-heading" style={{ marginBottom: '0' }}>
+                <span className="label">New Project</span>
+                <h1 style={{ fontSize: 'clamp(2.2rem, 5vw, 3.8rem)', fontWeight: 850, marginBottom: '15px' }}>
+                  Post Your <span className="text-gold">Project</span>
+                </h1>
+                <p style={{ maxWidth: '750px', margin: '0 auto', fontSize: '1.1rem', opacity: 0.8 }}>
+                  Tell us what you need, and expert engineers from our vetted network will reach out to you with professional proposals.
+                </p>
+            </div>
         </div>
 
-        <div className="dashboard-card glass">
-          <div className="card-body" style={{ padding: '40px' }}>
+        <div className="grid animate-fadeInUp delay-2" style={{ gridTemplateColumns: 'minmax(300px, 1fr) 1.5fr', gap: '40px', alignItems: 'start' }}>
+          
+          {/* Left Column: Info & Visual */}
+          <div className="flex-col gap-lg" style={{ position: 'sticky', top: '100px' }}>
+            <div className="card-glass" style={{ padding: '0', overflow: 'hidden', border: '1px solid rgba(212, 168, 67, 0.2)' }}>
+                <div style={{ position: 'relative', width: '100%', height: '320px' }}>
+                    <Image 
+                        src="/img/post_project_visual.png" 
+                        alt="Project Visual" 
+                        fill 
+                        style={{ objectFit: 'cover' }}
+                    />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, var(--navy-dark), transparent)' }}></div>
+                </div>
+                <div style={{ padding: 'var(--space-xl)', marginTop: '-80px', position: 'relative', zIndex: 1 }}>
+                    <h3 className="text-gold mb-3" style={{ fontSize: '1.5rem' }}>Professional Standards</h3>
+                    <div className="flex-col gap-md">
+                        <div className="flex gap-md">
+                            <div className="badge-gold" style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '10px', fontSize: '1.2rem' }}>👷</div>
+                            <div>
+                                <h4 style={{ fontSize: '1.05rem', marginBottom: '2px' }}>Vetted Engineers</h4>
+                                <p className="text-muted small">Every proposal comes from a verified construction professional.</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-md">
+                            <div className="badge-gold" style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '10px', fontSize: '1.2rem' }}>💰</div>
+                            <div>
+                                <h4 style={{ fontSize: '1.05rem', marginBottom: '2px' }}>Transparent Budgeting</h4>
+                                <p className="text-muted small">Receive competitive bids tailored to your specific project needs.</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-md">
+                            <div className="badge-gold" style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '10px', fontSize: '1.2rem' }}>⚡</div>
+                            <div>
+                                <h4 style={{ fontSize: '1.05rem', marginBottom: '2px' }}>Rapid Response</h4>
+                                <p className="text-muted small">Engineers typically respond within 24 hours of project posting.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="card glass" style={{ padding: 'var(--space-lg)' }}>
+              <p className="small text-muted" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.2rem' }}>🛡️</span>
+                Your project details are secure. Only authorized engineers can view your attachment and contact info.
+              </p>
+            </div>
+          </div>
+
+          {/* Right Column: Form Card */}
+          <div className="card-glass" style={{ padding: 'var(--space-2xl)', background: 'rgba(10, 22, 40, 0.7)' }}>
+            <h2 className="mb-4" style={{ fontSize: '1.8rem' }}>Project Specifications</h2>
             <form onSubmit={handleSubmit}>
-              <div className="form-group">
-                <label className="form-label">Project Title</label>
-                <input type="text" className="form-input" id="title" value={formData.title} onChange={handleChange} placeholder="e.g., Support Wall Construction" required />
+              <div className="form-group mb-4">
+                <label className="form-label" style={{ color: 'var(--gold)', letterSpacing: '0.5px' }}>PROJECT TITLE</label>
+                <input 
+                    type="text" 
+                    className="form-input" 
+                    id="title" 
+                    value={formData.title} 
+                    onChange={handleChange} 
+                    placeholder="e.g., Structural Analysis for G+2 Residential Building" 
+                    required 
+                    style={{ fontSize: '1.1rem', padding: '15px 20px' }}
+                />
               </div>
 
-              <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div className="grid grid-2 gap-lg mb-4">
                 <div className="form-group">
-                  <label className="form-label">Category</label>
-                  <select className="form-select" id="category" value={formData.category} onChange={handleChange}>
+                  <label className="form-label" style={{ color: 'var(--gold)', letterSpacing: '0.5px' }}>CATEGORY</label>
+                  <select className="form-select" id="category" value={formData.category} onChange={handleChange} style={{ height: '54px' }}>
                     <option value="Civil Engineer">Civil Engineer</option>
                     <option value="Architect">Architect</option>
                     <option value="Interior Designer">Interior Designer</option>
                     <option value="Contractor">Contractor</option>
+                    <option value="Structural Engineer">Structural Engineer</option>
                   </select>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Estimated Budget (INR)</label>
-                  <input type="number" className="form-input" id="budget" value={formData.budget} onChange={handleChange} placeholder="e.g., 50000" required />
+                  <label className="form-label" style={{ color: 'var(--gold)', letterSpacing: '0.5px' }}>ESTIMATED BUDGET (INR)</label>
+                  <input 
+                    type="number" 
+                    className="form-input" 
+                    id="budget" 
+                    value={formData.budget} 
+                    onChange={handleChange} 
+                    placeholder="e.g., 75000" 
+                    required 
+                    style={{ height: '54px' }}
+                  />
                 </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Location</label>
-                <input type="text" className="form-input" id="location" value={formData.location} onChange={handleChange} placeholder="e.g., Mumbai, Maharashtra" required />
+              <div className="form-group mb-4">
+                <label className="form-label" style={{ color: 'var(--gold)', letterSpacing: '0.5px' }}>PROJECT LOCATION</label>
+                <div style={{ position: 'relative' }}>
+                    <input 
+                        type="text" 
+                        className="form-input" 
+                        id="location" 
+                        value={formData.location} 
+                        onChange={handleChange} 
+                        placeholder="City, State" 
+                        required 
+                        style={{ height: '54px', paddingLeft: '45px' }}
+                    />
+                    <span style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', fontSize: '1.2rem' }}>📍</span>
+                </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Detailed Description</label>
-                <textarea className="form-input" id="description" rows={6} value={formData.description} onChange={handleChange} placeholder="Describe the project scope, materials needed, and timeline..." required></textarea>
+              <div className="form-group mb-4">
+                <label className="form-label" style={{ color: 'var(--gold)', letterSpacing: '0.5px' }}>DETAILED DESCRIPTION</label>
+                <textarea 
+                    className="form-input" 
+                    id="description" 
+                    rows={8} 
+                    value={formData.description} 
+                    onChange={handleChange} 
+                    placeholder="Provide a comprehensive description of the project scope, required materials, site dimensions, and any specific constraints..." 
+                    required
+                    style={{ padding: '20px', lineHeight: '1.6' }}
+                ></textarea>
               </div>
 
-              <button type="submit" className="btn btn-gold btn-block btn-lg" disabled={loading}>
-                {loading ? 'Posting Project...' : '🚀 Post Project Now'}
-              </button>
+              <div className="mt-5">
+                <button type="submit" className="btn btn-primary btn-block btn-lg" disabled={loading} style={{ height: '60px', fontSize: '1.2rem', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                    {loading ? (
+                    <>
+                        <span className="spinner-sm"></span> Processing your request...
+                    </>
+                    ) : (
+                    <>🚀 Submit Project for Review</>
+                    )}
+                </button>
+                <div className="text-center mt-3">
+                  <span className="text-muted small">All projects are reviewed by our moderation team for quality assurance.</span>
+                </div>
+              </div>
             </form>
           </div>
+
         </div>
       </div>
     </div>

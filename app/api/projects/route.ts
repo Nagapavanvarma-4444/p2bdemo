@@ -33,7 +33,12 @@ export async function POST(request: Request) {
     if (authError) return authError;
 
     const body = await request.json();
-    const { title, description, category, location, budget_min, budget_max, timeline } = body;
+    const { title, description, category, location, budget, budget_min, budget_max, timeline } = body;
+
+    // Handle flexible budget input
+    const final_budget_min = budget_min !== undefined ? budget_min : (budget || 0);
+    const final_budget_max = budget_max !== undefined ? budget_max : (budget ? budget * 1.5 : 0);
+    const final_timeline = timeline || "Not specified";
 
     // 2. SECURE CLIENT: Use the server-side client with the user's session
     const supabase = await createClient();
@@ -46,20 +51,22 @@ export async function POST(request: Request) {
         description,
         category,
         location,
-        budget_min,
-        budget_max,
-        timeline,
+        budget_min: final_budget_min,
+        budget_max: final_budget_max,
+        timeline: final_timeline,
         status: 'open'
       })
       .select()
       .single();
 
     if (insertError) {
+      console.error("❌ [Projects API] Insert Error:", insertError.message);
       return NextResponse.json({ error: insertError.message }, { status: 400 });
     }
 
     return NextResponse.json({ project }, { status: 201 });
   } catch (err: any) {
+    console.error("❌ [Projects API] Unexpected Error:", err.message);
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

@@ -35,10 +35,16 @@ export default function CustomerDashboard() {
       <div className="dashboard-container">
         <aside className="dashboard-sidebar">
           <div className="sidebar-user">
-            <div className="avatar">{user.avatar ? <img src={user.avatar} alt="" /> : user.name.charAt(0)}</div>
+            <div className="avatar">
+              {user?.avatar ? (
+                <img src={user.avatar} alt={user.name || 'User'} />
+              ) : (
+                (user?.name || 'U').charAt(0).toUpperCase()
+              )}
+            </div>
             <div className="sidebar-user-info">
-              <h4>{user.name}</h4>
-              <p>Customer</p>
+              <h4>{user?.name || 'Customer'}</h4>
+              <p>Verified Account</p>
             </div>
           </div>
           <nav className="sidebar-nav">

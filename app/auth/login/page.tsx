@@ -24,23 +24,42 @@ export default function Login() {
     setError('');
 
     try {
-      // 🚀 RESTORED GLOBAL KEY: p2b_api_call
-      const data = await p2b_api_call('/api/auth/login', {
+      console.log("👉 [Auth] Starting login for:", formData.email);
+      
+      // Clear any junk before starting
+      localStorage.removeItem('p2b_token');
+      localStorage.removeItem('p2b_user');
+
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
-        body: {
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           email: formData.email,
           password: formData.password
-        }
+        })
       });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed. Please check your credentials.');
+      }
+
+      console.log("✅ [Auth] Login successful!", data.user.role);
       
+      // Store credentials
       localStorage.setItem('p2b_token', data.token);
       localStorage.setItem('p2b_user', JSON.stringify(data.user));
       
+      // Redirect based on role
       if (data.user.role === 'admin') router.push('/admin');
       else if (data.user.role === 'engineer') router.push('/dashboard/engineer');
       else router.push('/dashboard/customer');
+      
     } catch (err: any) {
+      console.error("❌ [Auth] Error:", err.message);
       setError(err.message);
+    } finally {
       setLoading(false);
     }
   };

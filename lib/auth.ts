@@ -23,10 +23,10 @@ export async function requireAuth(request: Request) {
 
     const supabase = await createClient();
     
-    // 1. Get the session from cookies
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    // 1. Get the authenticated user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
     
-    if (sessionError || !session) {
+    if (userError || !user) {
       return { 
         user: null, 
         error: NextResponse.json({ error: 'Unauthorized: Session missing' }, { status: 401 }) 
@@ -36,22 +36,22 @@ export async function requireAuth(request: Request) {
     // 2. Fetch profile to get the CORRECT role from the database
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('*') // Get everything for maximum flexibility
-      .eq('id', session.user.id)
+      .select('*')
+      .eq('id', user.id)
       .single();
 
     if (profileError || !profile) {
        // If no profile exists, we use the auth metadata as a fallback
        return { 
-         user: { ...session.user, role: (session.user as any).user_metadata?.role || 'customer' }, 
+         user: { ...user, role: (user as any).user_metadata?.role || 'customer' }, 
          error: null 
        };
     }
     
     // Standardize role to lowercase for consistency
-    const standardizedRole = profile.role?.toLowerCase();
+    const standardizedRole = (profile.role || 'customer').toLowerCase();
     
-    return { user: { ...session.user, ...profile, role: standardizedRole }, error: null };
+    return { user: { ...user, ...profile, role: standardizedRole }, error: null };
   } catch (err: any) {
     return { 
       user: null, 

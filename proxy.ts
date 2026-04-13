@@ -61,13 +61,22 @@ export async function proxy(request: NextRequest) {
           .eq('id', user.id)
           .single();
         
-        if (profile?.role !== 'admin' && !request.nextUrl.pathname.startsWith('/maintenance')) {
+        const masterAdminId = "ad000000-0000-0000-0000-000000000001";
+        const hasAdminCookie = request.cookies.get('p2b_admin_active')?.value === 'true';
+        const isAdmin = profile?.role?.toLowerCase() === 'admin' || user?.user_metadata?.role === 'admin' || user.id === masterAdminId || hasAdminCookie;
+        
+        if (!isAdmin && !request.nextUrl.pathname.startsWith('/maintenance')) {
           return NextResponse.redirect(new URL('/maintenance', request.url));
         }
       } else {
-        // If no user and maintenance is on, redirect all to maintenance
-        if (!request.nextUrl.pathname.startsWith('/maintenance') && !request.nextUrl.pathname.startsWith('/auth')) {
-            return NextResponse.redirect(new URL('/maintenance', request.url));
+        // If no user session found, check for the custom admin bypass cookie
+        const hasAdminCookie = request.cookies.get('p2b_admin_active')?.value === 'true';
+        
+        if (!hasAdminCookie) {
+          // If neither exists and maintenance is on, redirect to maintenance
+          if (!request.nextUrl.pathname.startsWith('/maintenance') && !request.nextUrl.pathname.startsWith('/auth')) {
+              return NextResponse.redirect(new URL('/maintenance', request.url));
+          }
         }
       }
     }

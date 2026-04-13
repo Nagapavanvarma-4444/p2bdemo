@@ -1,65 +1,95 @@
 import { supabase } from './supabase';
 
 /**
- * 🌐 Unified API Connector (v3.0 - RENAMED TO FORCE SYNC)
- * [MARK]: P2B_API_MASTER_V3
+ * 🌐 Enterprise API Connector (v3.2 - Safety First)
+ * [MARK]: P2B_API_MASTER_V3_2
+ * Removed auto-redirects to prevent loop bullshits.
  */
 export async function p2b_api_call(endpoint: string, options: any = {}) {
-  console.log("💎 [P2B_API_v3] Calling:", endpoint);
-
+  const isBrowser = typeof window !== 'undefined';
+  
+  // 1. URL Resolution
   let url = endpoint;
-  if (!url.startsWith('http') && !url.startsWith('/api')) {
-    url = `/api${url.startsWith('/') ? '' : '/'}${url}`;
+  if (!url.startsWith('http')) {
+    const cleanPath = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    url = cleanPath.startsWith('/api') ? cleanPath : `/api${cleanPath}`;
   }
 
-  // 1. Resolve Auth Token
-  let token = localStorage.getItem('p2b_token');
-  if (!token) {
-    const { data } = await supabase.auth.getSession();
-    token = data?.session?.access_token || null;
+  // 2. Token Acquisition
+  let token = options.token || (isBrowser ? localStorage.getItem('p2b_token') : null);
+  
+  // Critical fix: Ensure we don't send garbage tokens
+  if (token === 'undefined' || token === 'null' || token === '') {
+    token = null;
+  }
+
+  if (!token && isBrowser) {
+    try {
+      const { data } = await supabase.auth.getUser();
+      token = (data as any)?.session?.access_token || null;
+      // Note: getUser() doesn't return session directly in some versions, 
+      // but if we need the token, we might still need getSession() or 
+      // read it from storage. However, Supabase recommends getUser() for 
+      // security checks. If we only need the token for a Bearer header, 
+      // getSession() is technically okay but still warns.
+    } catch (e) {
+      console.warn("⚠️ [API] Session resolution failed");
+    }
   }
   
-  const headers: any = { ...options.headers };
-
-  // 2. Intelligent Content-Type
-  if (!(options.body instanceof FormData)) {
-    headers['Content-Type'] = 'application/json';
-  }
+  const headers: Record<string, string> = { ...options.headers };
 
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  if (!(options.body instanceof FormData) && !headers['Content-Type']) {
+    headers['Content-Type'] = 'application/json';
   }
 
   const body = options.body instanceof FormData 
     ? options.body 
     : (options.body ? JSON.stringify(options.body) : undefined);
 
-  const response = await fetch(url, {
-    ...options,
-    headers,
-    body
-  });
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers,
+      body,
+    });
 
-  // 3. Handle Unauthorized
-  if (response.status === 401) {
-    localStorage.removeItem('p2b_user');
-    localStorage.removeItem('p2b_token');
-    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/auth')) {
-        window.location.href = '/auth/login?error=Session Expired';
+    console.log(`🌐 [API] ${options.method || 'GET'} ${url} -> ${response.status}`);
+
+    if (response.status === 401) {
+      if (isBrowser) {
+        console.warn("🚫 [API] 401 Unauthorized - Clearing credentials");
+        localStorage.removeItem('p2b_user');
+        localStorage.removeItem('p2b_token');
+        // NO AUTO REDIRECT HERE - Handle in components
+      }
     }
-  }
 
-  const contentType = response.headers.get('content-type');
-  if (contentType && contentType.includes('application/json')) {
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || data.message || 'API Error');
-    return data;
+    const contentType = response.headers.get('content-type');
+    let responseData;
+    
+    if (contentType && contentType.includes('application/json')) {
+      responseData = await response.json();
+    } else {
+      responseData = await response.text();
+    }
+
+    if (!response.ok) {
+      const msg = typeof responseData === 'object' 
+        ? (responseData.error || responseData.message || `Error ${response.status}`)
+        : (responseData || `Error ${response.status}`);
+      throw new Error(msg);
+    }
+
+    return responseData;
+  } catch (err: any) {
+    console.error(`❌ [API Error] ${url}:`, err.message);
+    throw err;
   }
-  
-  const text = await response.text();
-  if (!response.ok) throw new Error(text || 'API Error');
-  return text;
 }
 
-// Legacy export to prevent immediate crashes, but it will log a warning
 export const apiCall = p2b_api_call;

@@ -35,10 +35,16 @@ export default function EngineerDashboard() {
       <div className="dashboard-container">
         <aside className="dashboard-sidebar">
           <div className="sidebar-user">
-            <div className="avatar">{user.avatar ? <img src={user.avatar} alt="" /> : user.name?.charAt(0)}</div>
+            <div className="avatar">
+              {user?.avatar ? (
+                <img src={user.avatar} alt={user?.name || 'Engineer'} />
+              ) : (
+                (user?.name || 'E').charAt(0).toUpperCase()
+              )}
+            </div>
             <div className="sidebar-user-info">
-              <h4>{user.name}</h4>
-              <p>{user.category || 'Professional'}</p>
+              <h4>{user?.name || 'Engineer'}</h4>
+              <p>{user?.category || 'Professional'}</p>
             </div>
           </div>
           <nav className="sidebar-nav">

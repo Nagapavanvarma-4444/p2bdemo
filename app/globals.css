@@ -3335,13 +3335,40 @@ tr:hover {
 }
 
 /* --- ?? PLAN 2 BUILD UNIVERSAL UI FIX --- */
-.nav-actions { display: flex; align-items: center; gap: 20px !important; }
+.nav-actions { display: flex; align-items: center; gap: 20px !important; position: relative; }
 .user-dropdown { 
   display: flex !important; 
   flex-direction: column !important; 
+  position: absolute !important;
+  top: calc(100% + 15px) !important;
+  right: 0 !important;
+  background: #0f1c2e !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
   padding: 10px !important; 
-  min-width: 180px !important;
-  gap: 8px !important;
+  min-width: 220px !important;
+  gap: 5px !important;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5) !important;
+  z-index: 9999 !important;
+  animation: fadeInUp 0.3s ease-out !important;
+}
+.user-dropdown-header {
+  padding: 12px 15px !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+  margin-bottom: 5px !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+.user-dropdown-header strong {
+  display: block !important;
+  color: var(--gold) !important;
+  font-size: 0.95rem !important;
+}
+.user-dropdown-header span {
+  font-size: 0.75rem !important;
+  color: #888 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
 }
 .user-dropdown a, .user-dropdown button { 
   padding: 10px 15px !important; 

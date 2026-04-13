@@ -16,19 +16,19 @@ export default function Navbar() {
   useEffect(() => {
     // 1. Sync User Session (Real-time)
     const syncUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
         // Fetch profile details
         const { data: profile } = await supabase
           .from('profiles')
           .select('*')
-          .eq('id', session.user.id)
+          .eq('id', user.id)
           .single();
         
-        setUser({ ...session.user, ...profile });
+        setUser({ ...user, ...profile });
         
         // Backup to localStorage for legacy client pieces
-        localStorage.setItem('p2b_user', JSON.stringify({ ...session.user, ...profile }));
+        localStorage.setItem('p2b_user', JSON.stringify({ ...user, ...profile }));
       } else {
         setUser(null);
       }
@@ -91,16 +91,16 @@ export default function Navbar() {
           {user ? (
             <>
               <Link href="/messages" className="notification-bell" title="Messages">💬</Link>
-              <div className="avatar" onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} style={{ cursor: 'pointer' }} title={user.name}>
+              <div className="avatar" onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} style={{ cursor: 'pointer' }} title={user.name || 'User'}>
                 {user.avatar_url ? (
-                  <img src={user.avatar_url} alt={user.name} />
+                  <img src={user.avatar_url} alt={user.name || 'User'} />
                 ) : (
-                  user.name?.charAt(0).toUpperCase()
+                  (user.name || user.email || 'U').charAt(0).toUpperCase()
                 )}
               </div>
               
               {isUserMenuOpen && (
-                <div className="user-dropdown" style={{ display: 'block' }}>
+                <div className="user-dropdown">
                   <div className="user-dropdown-header">
                     <strong>{user.name || 'User'}</strong>
                     <span>{user.role}</span>

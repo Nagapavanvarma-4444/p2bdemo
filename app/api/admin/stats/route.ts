@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     const supabase = await createClient();
 
     // Parallel fetch for speed
-    const [stats, projects, pending, settings] = await Promise.all([
+    const [profilesCount, projectsCount, pendingCount, settingsResult] = await Promise.all([
       supabase.from('profiles').select('*', { count: 'exact', head: true }),
       supabase.from('projects').select('*', { count: 'exact', head: true }),
       supabase.from('profiles').select('*', { count: 'exact', head: true }).eq('role', 'engineer').eq('is_approved', false),
@@ -23,12 +23,13 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       stats: {
-        total_users: stats.count || 0,
-        total_projects: projects.count || 0,
-        pending_approvals: pending.count || 0,
+        total_users: profilesCount.count || 0,
+        total_projects: projectsCount.count || 0,
+        pending_approvals: pendingCount.count || 0,
       },
       settings: {
-        maintenance_mode: settings.data?.maintenance_mode || false
+        maintenance_mode: settingsResult.data?.maintenance_mode || false,
+        id: settingsResult.data?.id || 1
       }
     });
   } catch (err: any) {
@@ -45,14 +46,16 @@ export async function PUT(request: Request) {
     const { maintenance_mode } = await request.json();
     const supabase = await createClient();
 
-    // Standardizing maintenance mode storage
-    const { error: updateError } = await supabase
+    // Ensure we update or create the global settings row (id 1)
+    const { data: updated, error: updateError } = await supabase
       .from('system_settings')
-      .upsert({ id: 1, maintenance_mode }, { onConflict: 'id' });
+      .upsert({ id: 1, maintenance_mode, updated_at: new Date().toISOString() }, { onConflict: 'id' })
+      .select()
+      .single();
 
     if (updateError) return NextResponse.json({ error: updateError.message }, { status: 400 });
 
-    return NextResponse.json({ message: 'Settings updated' });
+    return NextResponse.json({ message: 'System maintenance status updated successfully', settings: updated });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }

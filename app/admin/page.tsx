@@ -52,13 +52,14 @@ export default function AdminDashboard() {
 
   async function toggleMaintenance(current: boolean) {
     try {
-      await p2b_api_call('/api/admin/stats', {
+      const res = await p2b_api_call('/api/admin/stats', {
         method: 'PUT',
         body: { maintenance_mode: !current }
       });
+      alert(res.message || "Maintenance status updated!");
       fetchData();
     } catch (err: any) {
-      alert(err.message);
+      alert("Error: " + err.message);
     }
   }
 
@@ -66,6 +67,11 @@ export default function AdminDashboard() {
 
   return (
     <div className="dashboard-page">
+      {stats?.settings?.maintenance_mode && (
+        <div className="status-banner" style={{ background: '#fee2e2', color: '#991b1b', padding: '10px', textAlign: 'center', fontWeight: 'bold' }}>
+          ⚠️ SYSTEM IS CURRENTLY IN MAINTENANCE MODE
+        </div>
+      )}
       <div className="dashboard-container">
         <aside className="dashboard-sidebar">
           <div className="sidebar-user">
@@ -99,6 +105,38 @@ export default function AdminDashboard() {
                   <div className="stat-header"><div className="stat-icon red">⏳</div></div>
                   <div className="stat-value">{stats?.stats?.pending_approvals}</div>
                   <div className="stat-label">Pending Verifications</div>
+                </div>
+              </div>
+
+              {/* Prominent Maintenance Control section */}
+              <div className="dashboard-card" style={{ 
+                marginTop: 'var(--space-xl)', 
+                padding: 'var(--space-xl)',
+                background: stats?.settings?.maintenance_mode ? 'rgba(239, 68, 68, 0.1)' : 'rgba(34, 197, 94, 0.05)',
+                border: `2px solid ${stats?.settings?.maintenance_mode ? '#ef4444' : '#22c55e'}`
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '20px' }}>
+                  <div style={{ flex: '1 1 300px' }}>
+                    <h3 style={{ margin: 0, color: stats?.settings?.maintenance_mode ? '#991b1b' : '#14532d' }}>
+                      {stats?.settings?.maintenance_mode ? '🔒 System is in Maintenance Mode' : '✅ System is Live'}
+                    </h3>
+                    <p style={{ margin: '8px 0 0 0', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                      {stats?.settings?.maintenance_mode 
+                        ? "Only administrators can login. Regular users are currently see an 'Under Construction' message." 
+                        : "Regular users and engineers can login and use the platform normally."}
+                    </p>
+                  </div>
+                  <button 
+                    className={`btn ${stats?.settings?.maintenance_mode ? 'btn-danger' : 'btn-success'}`}
+                    style={{ minWidth: '200px', fontWeight: 'bold' }}
+                    onClick={() => {
+                        if (confirm(`Are you sure you want to ${stats?.settings?.maintenance_mode ? 'TURN OFF' : 'TURN ON'} maintenance mode?`)) {
+                            toggleMaintenance(stats?.settings?.maintenance_mode);
+                        }
+                    }}
+                  >
+                    {stats?.settings?.maintenance_mode ? '🟢 Turn OFF Maintenance' : '🔴 Put in Maintenance'}
+                  </button>
                 </div>
               </div>
             </>
