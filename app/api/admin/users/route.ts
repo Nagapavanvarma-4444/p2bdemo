@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase-server';
 import { requireAuth } from '@/lib/auth';
 
 /**
- * 👥 Admin User Management (Supabase Version)
+ * 👥 Admin User Management (Secure Version)
  */
 
 export async function GET(request: Request) {
@@ -12,6 +12,7 @@ export async function GET(request: Request) {
     if (error) return error;
     if (user.role !== 'admin') return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
 
+    const supabase = await createClient();
     const { searchParams } = new URL(request.url);
     const role = searchParams.get('role');
     
@@ -20,8 +21,6 @@ export async function GET(request: Request) {
 
     const { data: users, error: fetchError } = await query;
     if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 400 });
-
-    console.log(`[AdminAPI] Fetched ${users?.length} users. First user certs:`, users?.[0]?.certifications);
 
     return NextResponse.json({ users });
   } catch (err: any) {
@@ -36,6 +35,7 @@ export async function PUT(request: Request) {
     if (user.role !== 'admin') return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
 
     const { engineer_id, approved, reason } = await request.json();
+    const supabase = await createClient();
 
     const { error: updateError } = await supabase
       .from('profiles')
@@ -53,8 +53,8 @@ export async function PUT(request: Request) {
       user_id: engineer_id,
       type: approved ? 'profile_approved' : 'profile_rejected',
       message: approved 
-        ? "Your account has been approved! You can now start bidding on projects." 
-        : `Your account verification failed. Reason: ${reason}`
+        ? "✅ Congratulations! Your professional account has been approved. You can now bid on projects." 
+        : `❌ Your account verification failed. Reason: ${reason}`
     });
 
     return NextResponse.json({ message: `Engineer ${approved ? 'approved' : 'rejected'}` });

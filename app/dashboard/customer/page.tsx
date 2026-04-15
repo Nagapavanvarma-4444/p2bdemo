@@ -24,8 +24,17 @@ export default function CustomerDashboard() {
       router.push("/dashboard/engineer");
       return;
     }
-    setUser(userData);
-    setLoading(false);
+
+    // Sync user data with database
+    p2b_api_call('/profiles/' + userData.id).then(res => {
+      setUser(res.profile);
+      // Update local storage too so it persists
+      localStorage.setItem('p2b_user', JSON.stringify({ ...userData, ...res.profile }));
+      setLoading(false);
+    }).catch(() => {
+      setUser(userData);
+      setLoading(false);
+    });
   }, [router]);
 
   if (loading) return <div className="loading-state"><div className="spinner"></div></div>;
@@ -208,6 +217,16 @@ function ProjectsTab() {
                 <div className="project-meta">
                   <span>📍 {p.location}</span>
                   <span>🏷️ {p.category}</span>
+                  {p.attachment_url && (
+                    <a 
+                      href={p.attachment_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      style={{ color: 'var(--gold)', textDecoration: 'none', fontWeight: 'bold', fontSize: '0.85rem' }}
+                    >
+                      📎 View Attachment
+                    </a>
+                  )}
                 </div>
               </div>
               <span className={`badge badge-${p.status === 'open' ? 'green' : p.status === 'in_progress' ? 'blue' : 'gray'}`}>{p.status}</span>

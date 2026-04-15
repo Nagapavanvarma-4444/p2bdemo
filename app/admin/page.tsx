@@ -26,8 +26,9 @@ export default function AdminDashboard() {
   async function fetchData() {
     setLoading(true);
     try {
-      const statsRes = await p2b_api_call('/api/admin/stats');
-      const usersRes = await p2b_api_call('/api/admin/users');
+      const t = Date.now();
+      const statsRes = await p2b_api_call(`/api/admin/stats?t=${t}`);
+      const usersRes = await p2b_api_call(`/api/admin/users?t=${t}`);
       setStats(statsRes);
       setUsers(usersRes.users || []);
     } catch (err) {
@@ -278,7 +279,11 @@ export default function AdminDashboard() {
                   {users.map(u => (
                     <div key={u.id} className="project-item">
                       <div className="project-info">
-                        <h4>{u.name} <span className={`badge badge-${u.role === 'admin' ? 'red' : u.role === 'engineer' ? 'gold' : 'blue'}`} style={{ fontSize: '0.6rem' }}>{u.role}</span></h4>
+                        <h4>
+                            {u.name} 
+                            <span className={`badge badge-${u.role === 'admin' ? 'red' : u.role === 'engineer' ? 'gold' : 'blue'}`} style={{ fontSize: '0.6rem', marginLeft: '8px' }}>{u.role}</span>
+                            {u.is_verified && <span className="badge badge-green" style={{ fontSize: '0.6rem', marginLeft: '5px' }}>Verified</span>}
+                        </h4>
                         <p style={{ fontSize: '0.8rem' }}>{u.email}</p>
                       </div>
                       <span className={`badge badge-${u.is_active ? 'green' : 'gray'}`}>{u.is_active ? 'Active' : 'Inactive'}</span>

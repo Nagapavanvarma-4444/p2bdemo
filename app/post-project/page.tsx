@@ -13,6 +13,7 @@ export default function PostProject() {
     budget: "",
     location: "Mumbai",
   });
+  const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
   const router = useRouter();
@@ -35,12 +36,19 @@ export default function PostProject() {
     setLoading(true);
 
     try {
+      const fd = new FormData();
+      fd.append('title', formData.title);
+      fd.append('description', formData.description);
+      fd.append('category', formData.category);
+      fd.append('budget', formData.budget);
+      fd.append('location', formData.location);
+      if (file) {
+        fd.append('attachment', file);
+      }
+
       await p2b_api_call('/api/projects', {
         method: 'POST',
-        body: {
-          ...formData,
-          budget: parseFloat(formData.budget) || 0
-        }
+        body: fd
       });
       alert("Project posted successfully!");
       router.push('/dashboard/customer');
@@ -190,6 +198,42 @@ export default function PostProject() {
                     required
                     style={{ padding: '20px', lineHeight: '1.6' }}
                 ></textarea>
+              </div>
+
+              <div className="form-group mb-4">
+                <label className="form-label" style={{ color: 'var(--gold)', letterSpacing: '0.5px' }}>REFERENCE DOCUMENT / ARCHITECTURE PLAN (OPTIONAL)</label>
+                <div className="file-upload-container" style={{ 
+                  border: '2px dashed rgba(212, 168, 67, 0.3)', 
+                  borderRadius: '12px', 
+                  padding: '30px', 
+                  textAlign: 'center',
+                  background: 'rgba(212, 168, 67, 0.05)',
+                  transition: 'all 0.3s ease',
+                  cursor: 'pointer'
+                }} onClick={() => document.getElementById('attachment')?.click()}>
+                  <input 
+                    type="file" 
+                    id="attachment" 
+                    hidden 
+                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                  />
+                  <div style={{ fontSize: '2rem', marginBottom: '10px' }}>📁</div>
+                  {file ? (
+                    <div className="text-gold" style={{ fontWeight: '600' }}>
+                      Selected: {file.name}
+                      <button 
+                        type="button" 
+                        onClick={(e) => { e.stopPropagation(); setFile(null); }}
+                        style={{ marginLeft: '10px', background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '1.1rem' }}
+                      >✕</button>
+                    </div>
+                  ) : (
+                    <>
+                      <p style={{ margin: 0, fontWeight: '500' }}>Click to upload any document (PDF, Images, etc.)</p>
+                      <p className="text-muted small" style={{ marginTop: '5px' }}>Show engineers the type of architecture you want</p>
+                    </>
+                  )}
+                </div>
               </div>
 
               <div className="mt-5">

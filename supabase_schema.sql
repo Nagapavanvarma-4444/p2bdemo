@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS public.projects (
     timeline TEXT,
     status TEXT CHECK (status IN ('open', 'in_progress', 'completed', 'cancelled')) DEFAULT 'open',
     hired_engineer_id UUID REFERENCES public.profiles(id),
+    attachment_url TEXT,
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );

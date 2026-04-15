@@ -24,8 +24,17 @@ export default function EngineerDashboard() {
       router.push("/dashboard/customer");
       return;
     }
-    setUser(userData);
-    setLoading(false);
+
+    // Sync user data with database
+    p2b_api_call('/profiles/' + userData.id).then(res => {
+      setUser(res.profile);
+      // Update local storage too so it persists
+      localStorage.setItem('p2b_user', JSON.stringify({ ...userData, ...res.profile }));
+      setLoading(false);
+    }).catch(() => {
+      setUser(userData);
+      setLoading(false);
+    });
   }, [router]);
 
   if (loading) return <div className="loading-state"><div className="spinner"></div></div>;
@@ -270,6 +279,26 @@ function BrowseProjectsTab() {
               <h2>Submit Proposal</h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Project: {selectedProject.title}</p>
             </div>
+
+            <div style={{ marginBottom: '25px', padding: '15px', background: 'rgba(212, 168, 67, 0.05)', borderRadius: '10px', borderLeft: '4px solid var(--gold)' }}>
+                <h4 style={{ color: 'var(--gold)', marginBottom: '10px', fontSize: '1rem' }}>Project brief</h4>
+                <p style={{ fontSize: '0.9rem', lineHeight: '1.5', opacity: 0.9 }}>{selectedProject.description}</p>
+                
+                {selectedProject.attachment_url && (
+                  <div style={{ marginTop: '15px', paddingTop: '10px', borderTop: '1px solid rgba(212, 168, 67, 0.2)' }}>
+                    <a 
+                      href={selectedProject.attachment_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-gold"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', fontWeight: '600', textDecoration: 'none' }}
+                    >
+                      <span>📎</span> View Reference Document / Plan
+                    </a>
+                  </div>
+                )}
+            </div>
+
             <form className="modal-form" onSubmit={handleProposalSubmit}>
               <div className="form-group">
                 <label className="form-label">Your Bid Amount (₹)</label>
