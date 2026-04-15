@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { p2b_api_call } from "@/lib/api";
 
-type Tab = 'overview' | 'projects' | 'proposals' | 'reviews' | 'profile';
+type Tab = 'overview' | 'projects' | 'proposals' | 'reviews' | 'profile' | 'notifications';
 
 export default function EngineerDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
@@ -76,6 +76,9 @@ export default function EngineerDashboard() {
             <button className={`sidebar-link ${activeTab === 'reviews' ? 'active' : ''}`} onClick={() => setActiveTab('reviews')}>
               <span className="icon">⭐</span> Reviews
             </button>
+            <button className={`sidebar-link ${activeTab === 'notifications' ? 'active' : ''}`} onClick={() => setActiveTab('notifications')}>
+              <span className="icon">🔔</span> Notifications
+            </button>
             <Link href="/messages" className="sidebar-link"><span className="icon">💬</span> Messages</Link>
             <Link href="/subscription" className="sidebar-link"><span className="icon">💎</span> Subscription</Link>
           </nav>
@@ -86,6 +89,7 @@ export default function EngineerDashboard() {
           {activeTab === 'projects' && <BrowseProjectsTab />}
           {activeTab === 'proposals' && <ProposalsTab />}
           {activeTab === 'profile' && <ProfileTab user={user} />}
+          {activeTab === 'notifications' && <NotificationsTab />}
         </main>
       </div>
     </div>
@@ -402,3 +406,43 @@ function ProfileTab({ user }: any) {
     </div>
   );
 }
+
+function NotificationsTab() {
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    p2b_api_call('/api/notifications')
+      .then(res => {
+        setNotifications(res.notifications || []);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
+  if (loading) return <div className="spinner"></div>;
+
+  return (
+    <>
+      <div className="dashboard-header"><div><h1>Recent Notifications</h1><p className="subtitle">Stay updated with your latest activities</p></div></div>
+      <div className="dashboard-card">
+        <div className="card-body">
+          {notifications.length === 0 ? (
+            <div className="empty-state"><h3>No recent notifications</h3></div>
+          ) : notifications.map((n: any) => (
+            <div key={n.id} className="project-item" style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '15px' }}>
+                <div className="project-info">
+                  <h4 style={{ fontSize: '1rem', color: 'var(--text-main)', margin: '0 0 5px 0' }}>{n.message}</h4>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <small style={{ color: 'var(--text-muted)' }}>{new Date(n.created_at).toLocaleString()}</small>
+                    <span className={`badge ${n.read ? 'badge-gray' : 'badge-gold'}`} style={{ fontSize: '0.6rem' }}>{n.read ? 'Read' : 'New'}</span>
+                  </div>
+                </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+

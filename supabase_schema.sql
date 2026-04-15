@@ -104,3 +104,6 @@ CREATE POLICY "Public profiles are viewable by everyone" ON public.profiles FOR 
 CREATE POLICY "Projects are viewable by everyone" ON public.projects FOR SELECT USING (true);
 CREATE POLICY "Anyone can view proposals" ON public.proposals FOR SELECT USING (true);
 CREATE POLICY "Full access to own profile" ON public.profiles FOR ALL USING (auth.uid() = id);
+CREATE POLICY "Admins can manage all profiles" ON public.profiles FOR ALL USING (
+    (auth.jwt() -> 'user_metadata' ->> 'role') = 'admin'
+);
