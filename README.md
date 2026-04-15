@@ -1,36 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🏗️ PLAN 2 BUILD — The Construction Masterclass
 
-## Getting Started
+> **India's #1 Marketplace for Verified Construction Professionals**
 
-First, run the development server:
+[![Next.js 16](https://img.shields.io/badge/Next.js-16-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![Supabase](https://img.shields.io/badge/Supabase-Database-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Design-Premium%20Glass-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![Security](https://img.shields.io/badge/Auth-NextAuth%20%2B%20Lucia-FF4B4B?style=for-the-badge&logo=auth0&logoColor=white)](https://lucia-auth.com/)
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## 🌟 Overview
+
+**PLAN 2 BUILD** is a high-performance, full-stack marketplace designed to bridge the gap between home-owners and construction professionals. Whether you are looking for a **Civil Engineer**, **Architect**, or **Interior Designer**, our platform ensures every lead is vetted and every professional is verified.
+
+![Hero Banner](public/img/hero_visual.png)
+
+---
+
+## 🔥 Key Features
+
+### 🛡️ For Customers
+- **Unified Project Posting**: Post requirements with detailed specs, budgets, and timelines.
+- **Architecture Uploads**: Send your dream plans directly to engineers via a secure file upload system.
+- **Proposal Review**: Browse through professional bids with clear price and timeline breakdowns.
+- **Real-Time Messaging**: Chat directly with professionals to finalize details.
+
+### 👷 For Engineers
+- **Verification Badging**: Get a blue-tick verified badge by uploading professional certifications.
+- **Smart Dashboard**: Manage active proposals, reviews, and notifications in one sleek interface.
+- **File Sharing**: Access project-specific architectural docs uploaded by customers.
+- **Subscription Model**: Premium tiers for enhanced visibility and lead generation.
+
+### 👑 For Administrators
+- **Verification Engine**: Review and badge engineers based on submitted documents.
+- **System Control**: Toggle Maintenance Mode instantly for system updates.
+- **Live Monitoring**: Track total users, projects, and pending approvals.
+
+---
+
+## 🛠️ The Tech Stack
+
+| Layer | Technology | Role |
+| :--- | :--- | :--- |
+| **Frontend** | `Next.js 16 (App Router)` | High-performance Server Side Rendering & Client Navigation |
+| **Backend** | `Next.js API Routes` | Type-safe serverless functions |
+| **Database** | `Supabase (PostgreSQL)` | Robust data persistence with RLS security |
+| **Auth** | `Supabase SSR` | Secure cookie-based session management |
+| **Storage** | `Supabase Storage` | Encrypted storage for engineering docs and plans |
+| **Styling** | `Vanilla CSS + CSS Variables` | Custom, premium "Glassmorphism" design system |
+
+---
+
+## 🏗️ System Architecture
+
+```mermaid
+graph TD
+    User((User)) -->|Post Project| App[Next.js Frontend]
+    App -->|Auth/Data| SB((Supabase))
+    SB -->|RLS| DB[(PostgreSQL)]
+    App -->|Uploads| ST[(Supabase Storage)]
+    Admin((Admin)) -->|Verify| App
+    App -->|Notify| Eng((Engineer))
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 🚀 Getting Started
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 1. Clone the repository
+```bash
+git clone https://github.com/your-username/plan2build.git
+```
 
-## Learn More
+### 2. Install dependencies
+```bash
+npm install
+```
 
-To learn more about Next.js, take a look at the following resources:
+### 3. Setup Environment Variables
+Create a `.env.local` file:
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_key
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### 4. Database Setup
+Run the SQL found in `supabase_schema.sql` within your Supabase SQL editor to initialize tables and RLS policies.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 5. Run development server
+```bash
+npm run dev
+```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🎨 Premium Aesthetics
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The project features a **Midnight Glass** design system, combining:
+- **HSL-tailored Gold accents** (`#d4a843`) for a premium feel.
+- **Dynamic Micro-animations** for button hovers and card entries.
+- **Responsible Grid layouts** that scale from high-end desktops to mobile displays.
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [AGENTS.md](AGENTS.md) for specialized guidelines.
+
+---
+
+> Built with ❤️ by the **Nagapavanvarma** team for the future of construction.
